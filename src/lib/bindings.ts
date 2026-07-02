@@ -55,6 +55,9 @@ export interface GeneratedGraph {
   edges: GeneratedEdge[];
   notes: string;
 }
+export interface AiTextResult {
+  text: string;
+}
 
 export const api = {
   ping: (name: string) => invoke<string>("ping", { name }),
@@ -93,6 +96,8 @@ export const api = {
   /** Ask the LLM to assemble a node graph from a natural-language task. */
   generateWorkflow: (prompt: string) =>
     invoke<GeneratedGraph>("generate_workflow", { prompt }),
+  explainWorkflow: (graph: SerializedGraph, prompt: string) =>
+    invoke<AiTextResult>("explain_workflow", { graph, prompt }),
 
   // User-defined composite (sub-graph) modules.
   listCompositeModules: () => invoke<CompositeModule[]>("list_composite_modules"),

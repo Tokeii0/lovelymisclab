@@ -62,10 +62,57 @@ export interface Clipboard {
   }[];
 }
 
+interface GraphSnapshot {
+  nodes: FlowNode[];
+  edges: Edge[];
+}
+
+const MAX_HISTORY = 80;
+
+function cloneNode(n: FlowNode): FlowNode {
+  return {
+    ...n,
+    position: { ...n.position },
+    data: {
+      ...n.data,
+      params: { ...n.data.params },
+      outputs: n.data.outputs ? { ...n.data.outputs } : undefined,
+      logs: n.data.logs ? [...n.data.logs] : undefined,
+      inputParams: n.data.inputParams ? [...n.data.inputParams] : undefined,
+    },
+  };
+}
+
+function cloneEdge(e: Edge): Edge {
+  return { ...e };
+}
+
+function snapshot(nodes: FlowNode[], edges: Edge[]): GraphSnapshot {
+  return {
+    nodes: nodes.map(cloneNode),
+    edges: edges.map(cloneEdge),
+  };
+}
+
+function pushPast(past: GraphSnapshot[], snap: GraphSnapshot): GraphSnapshot[] {
+  return [...past, snap].slice(-MAX_HISTORY);
+}
+
+function shouldRecordNodeChanges(changes: NodeChange<FlowNode>[]) {
+  return changes.some((c) => c.type !== "select" && c.type !== "dimensions");
+}
+
+function shouldRecordEdgeChanges(changes: EdgeChange[]) {
+  return changes.some((c) => c.type !== "select");
+}
+
 interface GraphState {
   nodes: FlowNode[];
   edges: Edge[];
   selectedId: string | null;
+  past: GraphSnapshot[];
+  future: GraphSnapshot[];
+  runRevision: number;
 
   onNodesChange: (changes: NodeChange<FlowNode>[]) => void;
   onEdgesChange: (changes: EdgeChange[]) => void;
@@ -88,18 +135,48 @@ interface GraphState {
   deselectAll: () => void;
   paste: (clip: Clipboard, dx: number, dy: number) => void;
   loadFlow: (nodes: SavedNode[], edges: SavedEdge[]) => void;
+  undo: () => void;
+  redo: () => void;
+  canUndo: () => boolean;
+  canRedo: () => boolean;
 }
 
 export const useGraphStore = create<GraphState>((set, get) => ({
   nodes: [],
   edges: [],
   selectedId: null,
+  past: [],
+  future: [],
+  runRevision: 0,
 
   onNodesChange: (changes) =>
-    set({ nodes: applyNodeChanges(changes, get().nodes) }),
+    set((state) => {
+      const nodes = applyNodeChanges(changes, state.nodes);
+      if (!shouldRecordNodeChanges(changes)) return { nodes };
+      return {
+        nodes,
+        past: pushPast(state.past, snapshot(state.nodes, state.edges)),
+        future: [],
+      };
+    }),
   onEdgesChange: (changes) =>
-    set({ edges: applyEdgeChanges(changes, get().edges) }),
-  onConnect: (conn) => set({ edges: addEdge(conn, get().edges) }),
+    set((state) => {
+      const edges = applyEdgeChanges(changes, state.edges);
+      if (!shouldRecordEdgeChanges(changes)) return { edges };
+      return {
+        edges,
+        past: pushPast(state.past, snapshot(state.nodes, state.edges)),
+        future: [],
+        runRevision: state.runRevision + 1,
+      };
+    }),
+  onConnect: (conn) =>
+    set((state) => ({
+      edges: addEdge(conn, state.edges),
+      past: pushPast(state.past, snapshot(state.nodes, state.edges)),
+      future: [],
+      runRevision: state.runRevision + 1,
+    })),
 
   addNode: (descriptor, position) => {
     const params: Record<string, unknown> = {};
@@ -120,13 +197,19 @@ export const useGraphStore = create<GraphState>((set, get) => ({
         inputParams: [],
       },
     };
-    set({ nodes: [...get().nodes, node], selectedId: node.id });
+    set((state) => ({
+      nodes: [...state.nodes, node],
+      selectedId: node.id,
+      past: pushPast(state.past, snapshot(state.nodes, state.edges)),
+      future: [],
+      runRevision: state.runRevision + 1,
+    }));
     return node.id;
   },
 
   setParam: (nodeId, name, value) =>
-    set({
-      nodes: get().nodes.map((n) =>
+    set((state) => ({
+      nodes: state.nodes.map((n) =>
         n.id === nodeId
           ? {
               ...n,
@@ -134,7 +217,10 @@ export const useGraphStore = create<GraphState>((set, get) => ({
             }
           : n
       ),
-    }),
+      past: pushPast(state.past, snapshot(state.nodes, state.edges)),
+      future: [],
+      runRevision: state.runRevision + 1,
+    })),
 
   setSelected: (id) => set({ selectedId: id }),
 
@@ -160,16 +246,35 @@ export const useGraphStore = create<GraphState>((set, get) => ({
       })),
     }),
 
-  clear: () => set({ nodes: [], edges: [], selectedId: null }),
+  clear: () =>
+    set((state) => ({
+      nodes: [],
+      edges: [],
+      selectedId: null,
+      past: state.nodes.length || state.edges.length
+        ? pushPast(state.past, snapshot(state.nodes, state.edges))
+        : state.past,
+      future: [],
+      runRevision: state.runRevision + 1,
+    })),
 
   deleteNode: (id) =>
-    set({
-      nodes: get().nodes.filter((n) => n.id !== id),
-      edges: get().edges.filter((e) => e.source !== id && e.target !== id),
-      selectedId: get().selectedId === id ? null : get().selectedId,
-    }),
+    set((state) => ({
+      nodes: state.nodes.filter((n) => n.id !== id),
+      edges: state.edges.filter((e) => e.source !== id && e.target !== id),
+      selectedId: state.selectedId === id ? null : state.selectedId,
+      past: pushPast(state.past, snapshot(state.nodes, state.edges)),
+      future: [],
+      runRevision: state.runRevision + 1,
+    })),
 
-  deleteEdge: (id) => set({ edges: get().edges.filter((e) => e.id !== id) }),
+  deleteEdge: (id) =>
+    set((state) => ({
+      edges: state.edges.filter((e) => e.id !== id),
+      past: pushPast(state.past, snapshot(state.nodes, state.edges)),
+      future: [],
+      runRevision: state.runRevision + 1,
+    })),
 
   duplicateNode: (id) => {
     const n = get().nodes.find((x) => x.id === id);
@@ -189,17 +294,26 @@ export const useGraphStore = create<GraphState>((set, get) => ({
         error: undefined,
       },
     };
-    set({ nodes: [...get().nodes, copy], selectedId: copy.id });
+    set((state) => ({
+      nodes: [...state.nodes, copy],
+      selectedId: copy.id,
+      past: pushPast(state.past, snapshot(state.nodes, state.edges)),
+      future: [],
+      runRevision: state.runRevision + 1,
+    }));
   },
 
   selectAll: () => set({ nodes: get().nodes.map((n) => ({ ...n, selected: true })) }),
 
   setDisabled: (id, disabled) =>
-    set({
-      nodes: get().nodes.map((n) =>
+    set((state) => ({
+      nodes: state.nodes.map((n) =>
         n.id === id ? { ...n, data: { ...n.data, disabled } } : n
       ),
-    }),
+      past: pushPast(state.past, snapshot(state.nodes, state.edges)),
+      future: [],
+      runRevision: state.runRevision + 1,
+    })),
 
   appendLog: (id, log) =>
     set({
@@ -213,8 +327,8 @@ export const useGraphStore = create<GraphState>((set, get) => ({
   toggleParamInput: (nodeId, name) => {
     const node = get().nodes.find((n) => n.id === nodeId);
     const removing = node?.data.inputParams?.includes(name) ?? false;
-    set({
-      nodes: get().nodes.map((n) =>
+    set((state) => ({
+      nodes: state.nodes.map((n) =>
         n.id === nodeId
           ? {
               ...n,
@@ -229,17 +343,22 @@ export const useGraphStore = create<GraphState>((set, get) => ({
       ),
       // Un-promoting drops any edge that was feeding this param.
       edges: removing
-        ? get().edges.filter((e) => !(e.target === nodeId && e.targetHandle === name))
-        : get().edges,
-    });
+        ? state.edges.filter((e) => !(e.target === nodeId && e.targetHandle === name))
+        : state.edges,
+      past: pushPast(state.past, snapshot(state.nodes, state.edges)),
+      future: [],
+      runRevision: state.runRevision + 1,
+    }));
   },
 
   renameNode: (id, label) =>
-    set({
-      nodes: get().nodes.map((n) =>
+    set((state) => ({
+      nodes: state.nodes.map((n) =>
         n.id === id ? { ...n, data: { ...n.data, label } } : n
       ),
-    }),
+      past: pushPast(state.past, snapshot(state.nodes, state.edges)),
+      future: [],
+    })),
 
   deselectAll: () =>
     set({
@@ -286,11 +405,14 @@ export const useGraphStore = create<GraphState>((set, get) => ({
         );
       }
     }
-    set({
-      nodes: [...get().nodes.map((n) => ({ ...n, selected: false })), ...newNodes],
+    set((state) => ({
+      nodes: [...state.nodes.map((n) => ({ ...n, selected: false })), ...newNodes],
       edges,
       selectedId: newNodes[0]?.id ?? get().selectedId,
-    });
+      past: pushPast(state.past, snapshot(state.nodes, state.edges)),
+      future: [],
+      runRevision: state.runRevision + 1,
+    }));
   },
 
   loadFlow: (savedNodes, savedEdges) => {
@@ -325,6 +447,44 @@ export const useGraphStore = create<GraphState>((set, get) => ({
       if (m) max = Math.max(max, Number(m[1]) + 1);
     }
     counter = max;
-    set({ nodes: flowNodes, edges: flowEdges, selectedId: null });
+    set({
+      nodes: flowNodes,
+      edges: flowEdges,
+      selectedId: null,
+      past: [],
+      future: [],
+      runRevision: get().runRevision + 1,
+    });
   },
+
+  undo: () =>
+    set((state) => {
+      const previous = state.past[state.past.length - 1];
+      if (!previous) return {};
+      return {
+        nodes: previous.nodes.map(cloneNode),
+        edges: previous.edges.map(cloneEdge),
+        selectedId: null,
+        past: state.past.slice(0, -1),
+        future: [snapshot(state.nodes, state.edges), ...state.future].slice(0, MAX_HISTORY),
+        runRevision: state.runRevision + 1,
+      };
+    }),
+
+  redo: () =>
+    set((state) => {
+      const next = state.future[0];
+      if (!next) return {};
+      return {
+        nodes: next.nodes.map(cloneNode),
+        edges: next.edges.map(cloneEdge),
+        selectedId: null,
+        past: pushPast(state.past, snapshot(state.nodes, state.edges)),
+        future: state.future.slice(1),
+        runRevision: state.runRevision + 1,
+      };
+    }),
+
+  canUndo: () => get().past.length > 0,
+  canRedo: () => get().future.length > 0,
 }));
