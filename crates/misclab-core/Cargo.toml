@@ -59,6 +59,8 @@ num-traits = "0.2"
 # extra hashes / KDF
 sm3 = "0.4"                 # digest 0.10-compatible (0.5 needs digest 0.11)
 bcrypt = "0.16"
+pbkdf2 = "0.12"             # StegCloak key derivation (PBKDF2-HMAC-SHA512)
+getrandom = "0.2"           # random salt for StegCloak encryption
 # image metadata
 kamadak-exif = "0.6"
 # OpenPGP (rPGP) — message decryption

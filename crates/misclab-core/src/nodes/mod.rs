@@ -75,6 +75,7 @@ mod rot13;
 mod rot47;
 mod rsa;
 mod split;
+mod stegcloak;
 mod switch;
 mod switch_case;
 mod text_input;
@@ -119,6 +120,7 @@ mod substitution;
 mod substring;
 mod unicode_escape;
 mod unique_lines;
+mod whitespace_stego;
 
 use crate::node::registry::NodeRegistry;
 
@@ -160,6 +162,8 @@ pub fn register_builtins(reg: &mut NodeRegistry) {
     // steganography
     zero_width::register(reg);
     lsb_stego::register(reg);
+    stegcloak::register(reg);
+    whitespace_stego::register(reg);
     // hashes / MACs
     hash::register(reg);
     bcrypt::register(reg);
