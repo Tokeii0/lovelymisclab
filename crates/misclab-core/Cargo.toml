@@ -36,9 +36,36 @@ ripemd = "0.1"
 hmac = "0.12"
 crc32fast = "1"
 # symmetric ciphers
+cipher = { version = "0.4", features = ["alloc", "block-padding"] }
 aes = "0.8"
+des = "0.8"
+blowfish = "0.9"
+chacha20 = "0.9"
+salsa20 = "0.10"
 cbc = { version = "0.1", features = ["alloc"] }
 ctr = "0.9"
 ecb = { version = "0.1", features = ["alloc"] }
+# extra hashes
+blake2 = "0.10"
+whirlpool = "0.10"
 # character-set conversion
 encoding_rs = "0.8"
+# date / time
+chrono = { version = "0.4", default-features = false, features = ["std", "alloc"] }
+# big integers (RSA)
+num-bigint = "0.4"
+num-integer = "0.1"
+num-traits = "0.2"
+# extra hashes / KDF
+sm3 = "0.4"                 # digest 0.10-compatible (0.5 needs digest 0.11)
+bcrypt = "0.16"
+# extra decompression (pure Rust, decompress-only)
+bzip2-rs = "0.1"
+lzma-rs = "0.3"
+# image metadata
+kamadak-exif = "0.6"
+# OpenPGP (rPGP) — message decryption
+pgp = "0.20"
+
+[dev-dependencies]
+rand = "0.8"  # matches rPGP; only used by in-crate PGP fixture-generation test

@@ -1,0 +1,88 @@
+//! Detect a file's type from its magic bytes.
+use super::prelude::*;
+
+const MAGICS: &[(&[u8], &str)] = &[
+    (&[0x89, 0x50, 0x4E, 0x47], "PNG 图片"),
+    (&[0xFF, 0xD8, 0xFF], "JPEG 图片"),
+    (&[0x47, 0x49, 0x46, 0x38], "GIF 图片"),
+    (&[0x25, 0x50, 0x44, 0x46], "PDF 文档"),
+    (&[0x50, 0x4B, 0x03, 0x04], "ZIP / docx / jar / apk"),
+    (&[0x50, 0x4B, 0x05, 0x06], "空 ZIP"),
+    (&[0x50, 0x4B, 0x07, 0x08], "分卷 ZIP"),
+    (&[0x52, 0x61, 0x72, 0x21], "RAR 压缩包"),
+    (&[0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C], "7-Zip 压缩包"),
+    (&[0x1F, 0x8B], "Gzip 压缩"),
+    (&[0x42, 0x5A, 0x68], "Bzip2 压缩"),
+    (&[0xFD, 0x37, 0x7A, 0x58, 0x5A], "XZ 压缩"),
+    (&[0x7F, 0x45, 0x4C, 0x46], "ELF 可执行"),
+    (&[0x4D, 0x5A], "Windows PE / EXE / DLL"),
+    (&[0x42, 0x4D], "BMP 图片"),
+    (&[0x49, 0x44, 0x33], "MP3 (ID3)"),
+    (&[0x66, 0x4C, 0x61, 0x43], "FLAC 音频"),
+    (&[0x4F, 0x67, 0x67, 0x53], "OGG 音频"),
+    (&[0x53, 0x51, 0x4C, 0x69, 0x74, 0x65], "SQLite 数据库"),
+    (&[0xCA, 0xFE, 0xBA, 0xBE], "Java class"),
+    (&[0x49, 0x49, 0x2A, 0x00], "TIFF (小端)"),
+    (&[0x4D, 0x4D, 0x00, 0x2A], "TIFF (大端)"),
+    (&[0x00, 0x61, 0x73, 0x6D], "WebAssembly"),
+    (&[0x1A, 0x45, 0xDF, 0xA3], "Matroska / WebM"),
+    (&[0x00, 0x00, 0x01, 0x00], "ICO 图标"),
+    (&[0x25, 0x21, 0x50, 0x53], "PostScript"),
+    (&[0xD0, 0xCF, 0x11, 0xE0], "MS Office 旧格式 (doc/xls/ppt)"),
+    (&[0x38, 0x42, 0x50, 0x53], "PSD (Photoshop)"),
+];
+
+fn detect(data: &[u8]) -> String {
+    if data.len() >= 12 && &data[0..4] == b"RIFF" {
+        return match &data[8..12] {
+            b"WEBP" => "WEBP 图片",
+            b"WAVE" => "WAV 音频",
+            b"AVI " => "AVI 视频",
+            _ => "RIFF 容器",
+        }
+        .to_string();
+    }
+    if data.len() >= 12 && &data[4..8] == b"ftyp" {
+        return "MP4 / MOV (ISO 媒体)".to_string();
+    }
+    if data.len() >= 262 && &data[257..262] == b"ustar" {
+        return "TAR 归档".to_string();
+    }
+    for (sig, name) in MAGICS {
+        if data.starts_with(sig) {
+            return name.to_string();
+        }
+    }
+    "未知（未匹配已知幻数）".to_string()
+}
+
+struct N;
+impl Node for N {
+    fn run(&self, inputs: &PortMap, _p: &serde_json::Value, _c: &mut NodeCtx) -> Result<PortMap, CoreError> {
+        let data = in_bytes(inputs, "data")?;
+        let ty = detect(&data);
+        let head = data.iter().take(8).map(|b| format!("{b:02x}")).collect::<Vec<_>>().join(" ");
+        let mut m = PortMap::new();
+        m.insert("text".to_string(), PortValue::Text(format!("{ty}\n幻数: {head}")));
+        m.insert("type".to_string(), PortValue::Text(ty));
+        Ok(m)
+    }
+}
+
+pub fn register(reg: &mut NodeRegistry) {
+    reg.register(
+        desc(
+            "detect_file_type",
+            UTIL,
+            "文件类型识别",
+            AMBER,
+            vec![req("data", "输入", PortType::Any)],
+            vec![
+                req("text", "结果", PortType::Text),
+                opt("type", "类型", PortType::Text),
+            ],
+            vec![],
+        ),
+        Arc::new(|| Arc::new(N)),
+    );
+}

@@ -27,6 +27,7 @@ pub const HASH: &str = "哈希/摘要";
 pub const RADIX: &str = "进制转换";
 pub const CRYPTO: &str = "加密解密";
 pub const CHARSET: &str = "字符编码";
+pub const UTIL: &str = "工具/分析";
 pub const AI: &str = "AI";
 
 // Node header colors.

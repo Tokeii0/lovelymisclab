@@ -422,7 +422,7 @@ const CHARSETS = [
 ];
 const HASH_ALGOS = [
   "MD5", "MD4", "SHA1", "SHA224", "SHA256", "SHA384", "SHA512", "SHA3-256",
-  "SHA3-512", "Keccak-256", "RIPEMD-160", "CRC32",
+  "SHA3-512", "Keccak-256", "RIPEMD-160", "BLAKE2b", "BLAKE2s", "Whirlpool", "SM3", "CRC32", "Adler-32",
 ];
 const CYAN = "#06b6d4", SLATE = "#64748b", ROSE = "#f43f5e", TEAL = "#14b8a6";
 const fmt = (name: string, label: string, def: string) =>
@@ -456,6 +456,93 @@ pushDesc("map", "控制/逻辑", "逐项映射", AMBER, [p("list", "列表", "st
 pushDesc("filter_list", "控制/逻辑", "列表过滤", AMBER, [p("list", "列表", "stringList")], [p("list", "结果", "stringList"), p("count", "数量", "number", false)], [txt("pattern", "正则", "."), sel("mode", "模式", ["保留匹配", "排除匹配"], "保留匹配")]);
 pushDesc("join_list", "控制/逻辑", "列表合并", AMBER, [p("list", "列表", "stringList")], [p("text", "文本", "text")], [sel("sep", "分隔符", ["换行", "逗号", "空格", "无"], "换行")]);
 pushDesc("iterate", "控制/逻辑", "迭代循环", AMBER, textIn(), [p("text", "结果", "text"), p("iterations", "迭代次数", "number", false), p("hit", "命中", "bool", false)], [sel("op", "操作", XFORMS, "Base64解码"), txt("until", "停止正则(可选)", "flag\\{[^}]*\\}"), num("max", "最大次数", 1, 100, 1, 16)]);
+
+// CyberChef parity nodes (Batches A/B/C)
+const BLUE = "#3b82f6";
+const t2t = (id: string, cat: string, name: string, color: string, params: ParamSpec[]) =>
+  pushDesc(id, cat, name, color, textIn(), textOut(), params);
+const fmt3 = (name: string, label: string, def: string) => sel(name, label, ["UTF8", "Hex", "Base64"], def);
+const blockCipher = (extra: ParamSpec[]): ParamSpec[] => [
+  ...extra,
+  txt("key", "密钥", ""), fmt3("keyFormat", "密钥格式", "Hex"),
+  txt("iv", "IV", ""), fmt3("ivFormat", "IV 格式", "Hex"),
+  fmt3("inputFormat", "输入格式", "UTF8"), sel("outputFormat", "输出格式", ["Hex", "Base64", "UTF8"], "Hex"),
+];
+const streamCipher = (extra: ParamSpec[]): ParamSpec[] => [
+  ...extra,
+  txt("key", "密钥", ""), fmt3("keyFormat", "密钥格式", "Hex"),
+  txt("nonce", "Nonce", ""), fmt3("nonceFormat", "Nonce 格式", "Hex"),
+  fmt3("inputFormat", "输入格式", "UTF8"), sel("outputFormat", "输出格式", ["Hex", "Base64", "UTF8"], "Hex"),
+];
+
+t2t("change_case", "文本处理", "大小写转换", TEAL, [sel("mode", "模式", ["大写", "小写", "词首大写", "句首大写", "交换大小写"], "大写")]);
+t2t("remove_whitespace", "文本处理", "去除空白", TEAL, [sel("mode", "去除", ["全部空白", "空格", "换行", "制表符", "非可见字符"], "全部空白")]);
+t2t("sort_lines", "文本处理", "行排序", TEAL, [sel("order", "顺序", ["字母升序", "字母降序", "数字升序", "长度升序", "反转"], "字母升序")]);
+t2t("unique_lines", "文本处理", "行去重", TEAL, [tog("count", "统计出现次数", false)]);
+t2t("substring", "文本处理", "截取子串", TEAL, [num("start", "起始位置", 0, 1000000, 1, 0), num("length", "长度(0=到末尾)", 0, 1000000, 1, 0)]);
+t2t("regex_replace", "文本处理", "正则替换", TEAL, [txt("pattern", "正则", ""), txt("replacement", "替换为", ""), tog("global", "全部替换", true)]);
+t2t("pad_lines", "文本处理", "行填充", TEAL, [num("width", "目标宽度", 0, 1000, 1, 8), txt("char", "填充字符", " "), sel("side", "方向", ["右侧", "左侧"], "右侧")]);
+
+t2t("caesar", "加密解密", "凯撒密码", ROSE, [num("amount", "位移量", 0, 25, 1, 3)]);
+t2t("rail_fence_encode", "加密解密", "栅栏密码加密", ROSE, [num("rails", "栏数", 2, 100, 1, 3)]);
+t2t("rail_fence_decode", "加密解密", "栅栏密码解密", ROSE, [num("rails", "栏数", 2, 100, 1, 3)]);
+pushDesc("des", "加密解密", "DES / 3DES", ROSE, textIn(), decOut(), blockCipher([sel("operation", "操作", ["加密", "解密"], "加密"), sel("mode", "模式", ["CBC", "ECB"], "CBC")]));
+pushDesc("blowfish", "加密解密", "Blowfish", ROSE, textIn(), decOut(), blockCipher([sel("operation", "操作", ["加密", "解密"], "加密"), sel("mode", "模式", ["CBC", "ECB"], "CBC")]));
+pushDesc("chacha20", "加密解密", "ChaCha20", ROSE, textIn(), decOut(), streamCipher([sel("variant", "变体", ["ChaCha20", "XChaCha20"], "ChaCha20")]));
+pushDesc("salsa20", "加密解密", "Salsa20", ROSE, textIn(), decOut(), streamCipher([]));
+
+t2t("morse_encode", "编码/加密", "摩尔斯编码", BLUE, []);
+t2t("morse_decode", "编码/加密", "摩尔斯解码", BLUE, []);
+t2t("bacon_encode", "编码/加密", "培根密码编码", BLUE, []);
+t2t("bacon_decode", "编码/加密", "培根密码解码", BLUE, []);
+t2t("a1z26_encode", "编码/加密", "A1Z26 编码", BLUE, [sel("delimiter", "分隔符", ["空格", "逗号", "短横"], "空格")]);
+t2t("a1z26_decode", "编码/加密", "A1Z26 解码", BLUE, []);
+t2t("html_entity_encode", "编码/加密", "HTML 实体编码", BLUE, [sel("mode", "范围", ["仅特殊字符", "全部非ASCII"], "仅特殊字符")]);
+t2t("html_entity_decode", "编码/加密", "HTML 实体解码", BLUE, []);
+t2t("unicode_escape", "编码/加密", "Unicode 转义", BLUE, [sel("mode", "范围", ["仅非ASCII", "全部"], "仅非ASCII")]);
+t2t("unicode_unescape", "编码/加密", "Unicode 反转义", BLUE, []);
+pushDesc("to_hexdump", "编码/加密", "转 Hexdump", BLUE, anyIn(), textOut(), []);
+pushDesc("from_hexdump", "编码/加密", "Hexdump 转字节", BLUE, textIn(), decOut(), []);
+pushDesc("bitwise", "编码/加密", "位运算", BLUE, anyIn(), decOut(), [sel("operation", "运算", ["XOR", "AND", "OR", "NOT", "左移", "右移", "循环左移", "循环右移"], "XOR"), txt("key", "密钥(Hex)", ""), num("amount", "位数", 0, 7, 1, 1)]);
+
+pushDesc("to_octal", "进制转换", "转八进制", SLATE, anyIn(), textOut(), [sel("delimiter", "分隔符", ["空格", "无"], "空格")]);
+pushDesc("from_octal", "进制转换", "八进制转文本", SLATE, textIn(), decOut(), []);
+
+pushDesc("entropy", "工具/分析", "香农熵", AMBER, anyIn(), [p("entropy", "熵", "number"), p("text", "说明", "text", false)], []);
+t2t("char_frequency", "工具/分析", "字符频率", AMBER, []);
+t2t("defang", "工具/分析", "Defang/Refang", AMBER, [sel("operation", "操作", ["defang", "refang"], "defang")]);
+pushDesc("jwt_decode", "工具/分析", "JWT 解码", CYAN, textIn(), [p("text", "载荷", "text"), p("payload", "payload", "text", false), p("header", "header", "text", false)], []);
+
+pushDesc("compress", "压缩包", "压缩", AMBER, anyIn(), [p("hex", "hex", "text"), p("bytes", "字节", "bytes", false)], [sel("format", "格式", ["Gzip", "Zlib", "Raw Deflate"], "Gzip")]);
+pushDesc("decompress", "压缩包", "解压缩", AMBER, anyIn(), decOut(), [sel("format", "格式", ["自动", "Gzip", "Zlib", "Raw Deflate", "Bzip2", "XZ", "LZMA"], "自动")]);
+t2t("json_format", "工具/分析", "JSON 格式化", CYAN, [sel("operation", "操作", ["美化", "压缩"], "美化")]);
+t2t("substitution", "加密解密", "替换密码", ROSE, [txt("from", "明文字母表", "ABCDEFGHIJKLMNOPQRSTUVWXYZ"), txt("to", "密文字母表", "")]);
+t2t("braille_encode", "编码/加密", "盲文编码", BLUE, []);
+t2t("braille_decode", "编码/加密", "盲文解码", BLUE, []);
+t2t("from_timestamp", "工具/分析", "时间戳转日期", CYAN, []);
+t2t("to_timestamp", "工具/分析", "日期转时间戳", CYAN, []);
+pushDesc("rsa_params", "加密解密", "RSA 参数计算", ROSE, [], [p("text", "摘要", "text"), p("n", "n", "text", false), p("phi", "φ(n)", "text", false), p("d", "d", "text", false)], [txt("p", "素数 p", ""), txt("q", "素数 q", ""), txt("e", "公钥指数 e", "65537")]);
+pushDesc("rsa_decrypt", "加密解密", "RSA 解密", ROSE, textIn(), [p("text", "明文", "text"), p("int", "整数 m", "text", false), p("hex", "hex", "text", false), p("bytes", "字节", "bytes", false)], [txt("n", "模数 n", ""), txt("d", "私钥 d", ""), txt("p", "素数 p", ""), txt("q", "素数 q", ""), txt("e", "e", "65537")]);
+t2t("bifid_encode", "加密解密", "Bifid 加密", ROSE, [txt("keyword", "关键词", "")]);
+t2t("bifid_decode", "加密解密", "Bifid 解密", ROSE, [txt("keyword", "关键词", "")]);
+t2t("playfair_encode", "加密解密", "Playfair 加密", ROSE, [txt("keyword", "关键词", "")]);
+t2t("playfair_decode", "加密解密", "Playfair 解密", ROSE, [txt("keyword", "关键词", "")]);
+pushDesc("detect_file_type", "工具/分析", "文件类型识别", AMBER, anyIn(), [p("text", "结果", "text"), p("type", "类型", "text", false)], []);
+pushDesc("extract", "工具/分析", "信息提取", AMBER, textIn(), [p("text", "匹配(每行一个)", "text"), p("matches", "列表", "stringList", false), p("count", "数量", "number", false)], [sel("kind", "提取类型", ["IPv4", "IPv6", "邮箱", "URL", "MAC地址", "域名", "flag", "Base64块", "Hex串"], "IPv4"), tog("unique", "去重", true)]);
+pushDesc("rotate_bytes", "工具/分析", "位旋转 (ROL/ROR)", AMBER, anyIn(), [p("bytes", "字节", "bytes"), p("hex", "hex", "text", false), p("text", "文本", "text", false)], [sel("direction", "方向", ["左(ROL)", "右(ROR)"], "左(ROL)"), num("amount", "位数", 0, 64, 1, 1), tog("carry", "跨字节进位", false)]);
+t2t("to_charcode", "进制转换", "字符转码点", "#6366f1", [sel("base", "进制", ["16", "10", "8", "2"], "16"), sel("delimiter", "分隔符", ["空格", "逗号", "换行", "分号"], "空格")]);
+t2t("from_charcode", "进制转换", "码点转字符", "#6366f1", [sel("base", "进制", ["16", "10", "8", "2"], "16"), sel("delimiter", "分隔符", ["空格", "逗号", "换行", "分号"], "空格")]);
+pushDesc("quoted_printable_encode", "字符编码", "Quoted-Printable 编码", "#6366f1", anyIn(), textOut(), []);
+pushDesc("quoted_printable_decode", "字符编码", "Quoted-Printable 解码", "#6366f1", textIn(), decOut(), []);
+// Batch G — cold hashes / classical / decompress / forensics / PGP
+pushDesc("bcrypt", "哈希/摘要", "bcrypt", CYAN, [p("text", "口令", "text")], [p("text", "结果", "text"), p("result", "匹配", "bool", false)], [sel("operation", "操作", ["哈希", "校验"], "哈希"), num("cost", "代价(4-15)", 4, 15, 1, 10), txt("hash", "校验目标 hash", "")]);
+t2t("enigma", "加密解密", "Enigma 机", ROSE, [txt("rotors", "转子(左→右)", "I II III"), sel("reflector", "反射器", ["B", "C"], "B"), txt("ring", "环设置(3字母)", "AAA"), txt("position", "初始位置(3字母)", "AAA"), txt("plugboard", "插线板(如 AB CD)", "")]);
+t2t("adfgvx", "加密解密", "ADFGVX 密码", ROSE, [sel("operation", "操作", ["加密", "解密"], "加密"), sel("variant", "变体", ["ADFGVX (6×6)", "ADFGX (5×5)"], "ADFGVX (6×6)"), txt("keyword", "转置关键词", "SECRET"), txt("square", "方阵关键词(可空)", "")]);
+pushDesc("exif_extract", "工具/分析", "EXIF 信息", AMBER, anyIn(), [p("text", "元数据", "text"), p("fields", "字段", "stringList", false), p("count", "数量", "number", false)], []);
+pushDesc("lsb_extract", "隐写术", "LSB 提取", "#a855f7", anyIn(), [p("text", "文本", "text"), p("bytes", "字节", "bytes", false), p("hex", "hex", "text", false)], [txt("channels", "通道顺序 (R/G/B/A)", "RGB"), num("bit", "位平面 (0=最低位)", 0, 7, 1, 0), tog("msbFirst", "高位在前打包", true)]);
+pushDesc("pgp_dearmor", "加密解密", "PGP 解甲(Dearmor)", ROSE, textIn(), [p("bytes", "字节", "bytes"), p("hex", "hex", "text", false), p("type", "块类型", "text", false), p("crcOk", "CRC 校验", "bool", false)], []);
+pushDesc("pgp_enarmor", "加密解密", "PGP 装甲(Enarmor)", ROSE, anyIn(), textOut(), [sel("blockType", "块类型", ["MESSAGE", "PUBLIC KEY BLOCK", "PRIVATE KEY BLOCK", "SIGNATURE"], "MESSAGE")]);
+pushDesc("pgp_decrypt", "加密解密", "PGP 解密", ROSE, [p("text", "PGP 消息", "text"), p("key", "私钥(armored)", "text")], [p("text", "明文", "text"), p("bytes", "字节", "bytes", false), p("hex", "hex", "text", false)], [txt("passphrase", "口令(可空)", "")]);
 
 const DEMO_IMAGE =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Crect width='100%25' height='100%25' fill='%23000'/%3E%3Crect x='16' y='16' width='88' height='88' fill='%23fff'/%3E%3Ctext x='60' y='66' font-size='18' text-anchor='middle'%3EQR%3C/text%3E%3C/svg%3E";

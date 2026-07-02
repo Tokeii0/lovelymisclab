@@ -23,10 +23,22 @@ fn hash_hex(algo: &str, data: &[u8]) -> Result<String, CoreError> {
         "SHA3-512" => digest_hex::<sha3::Sha3_512>(data),
         "Keccak-256" => digest_hex::<sha3::Keccak256>(data),
         "RIPEMD-160" => digest_hex::<ripemd::Ripemd160>(data),
+        "BLAKE2b" => digest_hex::<blake2::Blake2b512>(data),
+        "BLAKE2s" => digest_hex::<blake2::Blake2s256>(data),
+        "Whirlpool" => digest_hex::<whirlpool::Whirlpool>(data),
+        "SM3" => digest_hex::<sm3::Sm3>(data),
         "CRC32" => {
             let mut h = crc32fast::Hasher::new();
             h.update(data);
             format!("{:08x}", h.finalize())
+        }
+        "Adler-32" => {
+            let (mut a, mut b) = (1u32, 0u32);
+            for &byte in data {
+                a = (a + byte as u32) % 65521;
+                b = (b + a) % 65521;
+            }
+            format!("{:08x}", (b << 16) | a)
         }
         other => return Err(CoreError::Parse(format!("未知哈希算法: {other}"))),
     })
@@ -88,7 +100,8 @@ pub fn register(reg: &mut NodeRegistry) {
                 "算法",
                 &[
                     "MD5", "MD4", "SHA1", "SHA224", "SHA256", "SHA384", "SHA512", "SHA3-256",
-                    "SHA3-512", "Keccak-256", "RIPEMD-160", "CRC32",
+                    "SHA3-512", "Keccak-256", "RIPEMD-160", "BLAKE2b", "BLAKE2s", "Whirlpool",
+                    "SM3", "CRC32", "Adler-32",
                 ],
                 "SHA256",
             )],
