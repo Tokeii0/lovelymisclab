@@ -485,7 +485,14 @@ export function ModuleRunDialog({
                   <EmptyBox text="运行后在这里查看结果" />
                 ) : (
                   <div className="space-y-3">
-                    {Object.entries(outputs).map(([k, v]) => (
+                    {[
+                      ...descriptor.outputs
+                        .filter((o) => outputs[o.name] !== undefined)
+                        .map((o) => [o.name, outputs[o.name]] as [string, PortValue]),
+                      ...Object.entries(outputs).filter(
+                        ([k]) => !descriptor.outputs.some((o) => o.name === k)
+                      ),
+                    ].map(([k, v]) => (
                       <div key={k}>
                         <div className="mb-1 flex items-center justify-between">
                           <span className="text-[11px] font-medium text-muted-foreground">
@@ -547,7 +554,12 @@ export function ModuleRunDialog({
                           {h.error
                             ? "失败"
                             : h.outputs
-                              ? outText(Object.values(h.outputs)[0] ?? { type: "none" }).slice(0, 40)
+                              ? outText(
+                                  descriptor.outputs
+                                    .map((o) => h.outputs![o.name])
+                                    .find((v) => v !== undefined) ??
+                                    Object.values(h.outputs)[0] ?? { type: "none" }
+                                ).slice(0, 40)
                               : ""}
                         </span>
                         <span className="shrink-0 text-muted-foreground">{h.elapsed}ms</span>

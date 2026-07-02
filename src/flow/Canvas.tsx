@@ -21,8 +21,9 @@ import { LabeledEdge } from "./LabeledEdge";
 import { NodeSearchMenu } from "./NodeSearchMenu";
 import { canConnect, paramPortType } from "./portColors";
 import { executeGraph } from "./runner";
+import { SelectorNode } from "./SelectorNode";
 
-const nodeTypes = { generic: GenericNode };
+const nodeTypes = { generic: GenericNode, selector: SelectorNode };
 const edgeTypes = { labeled: LabeledEdge };
 
 type Menu = {

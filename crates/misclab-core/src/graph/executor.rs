@@ -16,7 +16,7 @@ use crate::cancel::CancellationToken;
 use crate::error::CoreError;
 use crate::graph::compute::ComputeGraph;
 use crate::graph::model::{NodeId, NodeInstance, SerializedGraph};
-use crate::graph::port::PortValue;
+use crate::graph::port::{PortType, PortValue};
 use crate::node::descriptor::ParamWidget;
 use crate::node::registry::NodeRegistry;
 use crate::node::{NodeCtx, PortMap};
@@ -56,6 +56,42 @@ fn coerce_param(value: &PortValue, widget: &ParamWidget) -> Value {
             _ => json!(""),
         },
     }
+}
+
+fn num_to_string(n: f64) -> String {
+    if n.fract() == 0.0 && n.abs() < 1e15 {
+        (n as i64).to_string()
+    } else {
+        n.to_string()
+    }
+}
+
+/// Coerce a connected value to a declared input port type, where a natural
+/// string conversion exists (Number/Bool/StringList → Text). Returns `None`
+/// when no coercion is needed. Mirrors [`coerce_param`] but for input ports —
+/// this is what lets a numeric output (e.g. width/height) drive a text input.
+fn coerce_to_port(value: &PortValue, target: PortType) -> Option<PortValue> {
+    match (target, value) {
+        (PortType::Text, PortValue::Number(n)) => Some(PortValue::Text(num_to_string(*n))),
+        (PortType::Text, PortValue::Bool(b)) => Some(PortValue::Text(b.to_string())),
+        (PortType::Text, PortValue::StringList(v)) => Some(PortValue::Text(v.join("\n"))),
+        _ => None,
+    }
+}
+
+/// Apply input-port coercions to a node's gathered inputs, per its descriptor.
+fn coerce_inputs(registry: &NodeRegistry, descriptor_id: &str, mut inputs: PortMap) -> PortMap {
+    let Some(entry) = registry.get(descriptor_id) else {
+        return inputs;
+    };
+    for port in &entry.descriptor.inputs {
+        if let Some(v) = inputs.get(&port.name) {
+            if let Some(coerced) = coerce_to_port(v, port.port_type) {
+                inputs.insert(port.name.clone(), coerced);
+            }
+        }
+    }
+    inputs
 }
 
 /// Per-node output maps produced by a graph run.
@@ -257,6 +293,7 @@ impl<'a> GraphExecutor<'a> {
             .registry
             .create(&inst.descriptor_id)
             .ok_or_else(|| CoreError::NodeNotFound(inst.descriptor_id.clone()))?;
+        let inputs = coerce_inputs(self.registry, &inst.descriptor_id, inputs.clone());
         let mut ctx = NodeCtx {
             node_id: inst.id.clone(),
             sink,
@@ -265,7 +302,7 @@ impl<'a> GraphExecutor<'a> {
             registry: self.registry,
             depth: self.depth,
         };
-        node.run(inputs, params, &mut ctx)
+        node.run(&inputs, params, &mut ctx)
     }
 
     /// Run a single node standalone (the "quick tool" path) with explicit inputs
@@ -295,6 +332,7 @@ impl<'a> GraphExecutor<'a> {
         let node = registry
             .create(descriptor_id)
             .ok_or_else(|| CoreError::NodeNotFound(descriptor_id.to_string()))?;
+        let inputs = coerce_inputs(registry, descriptor_id, inputs.clone());
         let mut ctx = NodeCtx {
             node_id: format!("standalone:{descriptor_id}"),
             sink,
@@ -303,6 +341,6 @@ impl<'a> GraphExecutor<'a> {
             registry,
             depth: 0,
         };
-        node.run(inputs, params, &mut ctx)
+        node.run(&inputs, params, &mut ctx)
     }
 }

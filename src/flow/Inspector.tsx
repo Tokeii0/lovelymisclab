@@ -203,7 +203,16 @@ export function Inspector() {
           (Object.keys(outputs).length === 0 ? (
             <div className="text-muted-foreground">尚未运行，暂无输出</div>
           ) : (
-            Object.entries(outputs).map(([key, val]) => {
+            // Render in declared (descriptor) order; outputs arrive as an unordered
+            // map, so append any extra keys not in the descriptor at the end.
+            [
+              ...descriptor.outputs
+                .filter((o) => outputs[o.name] !== undefined)
+                .map((o) => [o.name, outputs[o.name]] as [string, PortValue]),
+              ...Object.entries(outputs).filter(
+                ([k]) => !descriptor.outputs.some((o) => o.name === k)
+              ),
+            ].map(([key, val]) => {
               const label = descriptor.outputs.find((o) => o.name === key)?.label ?? key;
               return (
                 <div key={key} className="mb-3">

@@ -51,7 +51,7 @@ export function RunConsole() {
 
       <div className="flex-1" />
 
-      <div className="flex items-center gap-1 overflow-x-auto">
+      <div className="flex min-w-0 items-center gap-1 overflow-x-auto">
         {nodes.slice(0, 10).map((n, i) => (
           <div key={n.id} className="flex items-center gap-1">
             {i > 0 && <span className="text-muted-foreground/50">→</span>}
@@ -63,6 +63,13 @@ export function RunConsole() {
           </div>
         ))}
       </div>
+
+      <span
+        className="shrink-0 border-l border-border pl-3 font-mono text-muted-foreground/70"
+        title="LovelyMiscLab 版本"
+      >
+        v{__APP_VERSION__}
+      </span>
     </div>
   );
 }

@@ -274,3 +274,42 @@ fn pixel_extract_hex_gray() {
     // luma(10,20,30)=18=0x12
     assert_eq!(text_of(&m, "text"), "12 12");
 }
+
+#[test]
+fn image_to_bits_no_newline() {
+    let mut img = RgbaImage::new(2, 2);
+    img.put_pixel(0, 0, Rgba([0, 0, 0, 255]));
+    img.put_pixel(1, 0, Rgba([255, 255, 255, 255]));
+    img.put_pixel(0, 1, Rgba([255, 255, 255, 255]));
+    img.put_pixel(1, 1, Rgba([0, 0, 0, 255]));
+    assert_eq!(text_of(&run("image_to_bits", &[("data", &img)], json!({ "rows": false })), "text"), "1001");
+    assert_eq!(text_of(&run("image_to_bits", &[("data", &img)], json!({ "rows": true })), "text"), "10\n01\n");
+}
+
+// ---- QR encode: EC / version / margin / colors ----
+
+#[test]
+fn qr_encode_decode_roundtrip() {
+    let secret = "flag{qr_扫码}";
+    let enc = run_text("qr_encode", secret, json!({ "ec": "H", "scale": 4, "margin": 2 }));
+    let bytes = match enc.get("bytes") {
+        Some(PortValue::Bytes(b)) => b.to_vec(),
+        o => panic!("no bytes: {o:?}"),
+    };
+    let dec = run_raw("qr_decode", "image", bytes, json!({}));
+    assert_eq!(text_of(&dec, "text"), secret);
+}
+
+#[test]
+fn qr_encode_version_margin_dims() {
+    // Version 3 = 29 modules; margin 0, scale 1 → 29×29.
+    let enc = run_text("qr_encode", "hi", json!({ "version": 3, "scale": 1, "margin": 0 }));
+    assert_eq!(decoded(&enc).dimensions(), (29, 29));
+}
+
+#[test]
+fn qr_encode_custom_colors() {
+    // Foreground blue, background red; QR module (0,0) is always dark → foreground.
+    let enc = run_text("qr_encode", "x", json!({ "dark": "#0000ff", "light": "#ff0000", "margin": 0, "scale": 1 }));
+    assert_eq!(decoded(&enc).get_pixel(0, 0).0, [0, 0, 255, 255]);
+}

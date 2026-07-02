@@ -105,7 +105,105 @@ fn port_type_validation() {
     assert!(PortType::Text.accepts(PortType::Text));
     assert!(PortType::Any.accepts(PortType::Bytes));
     assert!(PortType::Bytes.accepts(PortType::Any));
-    assert!(!PortType::Text.accepts(PortType::Number));
+    // Text inputs accept scalar/list sources (coerced to string at the boundary).
+    assert!(PortType::Text.accepts(PortType::Number));
+    assert!(PortType::Text.accepts(PortType::Bool));
+    assert!(PortType::Text.accepts(PortType::StringList));
+    // Unrelated / reverse directions still don't connect.
+    assert!(!PortType::Number.accepts(PortType::Text));
+    assert!(!PortType::Bytes.accepts(PortType::Number));
+}
+
+#[test]
+fn number_coerced_into_text_input_standalone() {
+    let reg = default_registry();
+    let mut inputs = HashMap::new();
+    inputs.insert("text".to_string(), PortValue::Number(42.0));
+    let out = GraphExecutor::run_node(
+        &reg,
+        "text_output",
+        &inputs,
+        &json!({}),
+        &NullSink,
+        &CancellationToken::new(),
+    )
+    .unwrap();
+    // text_output echoes its input on "value"; coercion turned it into Text("42").
+    match out.get("value") {
+        Some(PortValue::Text(s)) => assert_eq!(s, "42"),
+        other => panic!("expected Text(\"42\"), got {other:?}"),
+    }
+}
+
+#[test]
+fn selector_drives_select_param() {
+    // Graph: "flag" → hash.data ; selector("SHA1") → hash.algorithm (a select param).
+    // The hash node's own default is SHA256, so a correct result proves the
+    // selector overrode the parameter.
+    let reg = default_registry();
+    let graph = SerializedGraph {
+        nodes: vec![
+            node("in", "text_input", json!({ "text": "flag" })),
+            node("sel", "selector", json!({ "value": "SHA1" })),
+            node("h", "hash", json!({ "algorithm": "SHA256" })),
+        ],
+        edges: vec![
+            edge("in", "text", "h", "data"),
+            edge("sel", "value", "h", "algorithm"),
+        ],
+    };
+    let out = GraphExecutor::new(&reg, &graph)
+        .unwrap()
+        .run(&NullSink, &CancellationToken::new())
+        .unwrap();
+    let got = match out.get("h").and_then(|m| m.get("text")) {
+        Some(PortValue::Text(s)) => s.clone(),
+        o => panic!("no hash output: {o:?}"),
+    };
+
+    let hash_of = |algo: &str| {
+        let mut i = HashMap::new();
+        i.insert("data".to_string(), PortValue::Text("flag".into()));
+        match GraphExecutor::run_node(
+            &reg,
+            "hash",
+            &i,
+            &json!({ "algorithm": algo }),
+            &NullSink,
+            &CancellationToken::new(),
+        )
+        .unwrap()
+        .get("text")
+        {
+            Some(PortValue::Text(s)) => s.clone(),
+            _ => panic!("no digest"),
+        }
+    };
+    assert_eq!(got, hash_of("SHA1"), "selector should drive algorithm=SHA1");
+    assert_ne!(got, hash_of("SHA256"), "must not fall back to the default");
+}
+
+#[test]
+fn number_output_drives_text_input_in_graph() {
+    // text_input → length(Number) → text_output(Text): the number is coerced.
+    let reg = default_registry();
+    let graph = SerializedGraph {
+        nodes: vec![
+            node("a", "text_input", json!({ "text": "hello" })),
+            node("b", "length", json!({})),
+            node("c", "text_output", json!({})),
+        ],
+        edges: vec![
+            edge("a", "text", "b", "text"),
+            edge("b", "length", "c", "text"),
+        ],
+    };
+    let exec = GraphExecutor::new(&reg, &graph).unwrap();
+    let out = exec.run(&NullSink, &CancellationToken::new()).unwrap();
+    match out.get("c").and_then(|m| m.get("value")) {
+        Some(PortValue::Text(s)) => assert_eq!(s, "5"),
+        other => panic!("expected Text(\"5\"), got {other:?}"),
+    }
 }
 
 #[test]

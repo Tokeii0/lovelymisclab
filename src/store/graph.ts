@@ -43,6 +43,10 @@ export type FlowNode = Node<FlowNodeData>;
 let counter = 0;
 const nextId = (prefix: string) => `${prefix}_${counter++}`;
 
+/** React Flow node component to use for a descriptor (most use the generic one). */
+const flowType = (descriptorId: string) =>
+  descriptorId === "selector" ? "selector" : "generic";
+
 export interface ClipboardNode {
   oldId: string;
   descriptorId: string;
@@ -106,7 +110,7 @@ export const useGraphStore = create<GraphState>((set, get) => ({
     for (const p of descriptor.params) params[p.name] = p.default;
     const node: FlowNode = {
       id: nextId(descriptor.id),
-      type: "generic",
+      type: flowType(descriptor.id),
       position,
       data: {
         descriptorId: descriptor.id,
@@ -254,7 +258,7 @@ export const useGraphStore = create<GraphState>((set, get) => ({
       idMap[cn.oldId] = id;
       return {
         id,
-        type: "generic",
+        type: flowType(cn.descriptorId),
         position: { x: cn.position.x + dx, y: cn.position.y + dy },
         selected: true,
         data: {
@@ -296,7 +300,7 @@ export const useGraphStore = create<GraphState>((set, get) => ({
   loadFlow: (savedNodes, savedEdges) => {
     const flowNodes: FlowNode[] = savedNodes.map((n) => ({
       id: n.id,
-      type: "generic",
+      type: flowType(n.descriptorId),
       position: { x: n.position.x, y: n.position.y },
       data: {
         descriptorId: n.descriptorId,

@@ -79,7 +79,17 @@ function GenericNodeImpl({ id, data: raw, selected }: NodeProps) {
 
   const Icon = nodeIcon(descriptor.id, descriptor.category);
   const outputs = data.outputs;
-  const firstOut = outputs ? Object.entries(outputs)[0] : undefined;
+  // Preview the first *declared* output that has a value. Node outputs arrive as
+  // an unordered map (Rust HashMap → JSON), so iterating by key order would pick
+  // a random port each run; follow the descriptor's declared order instead.
+  const firstOut: [string, PortValue] | undefined = (() => {
+    if (!outputs) return undefined;
+    for (const p of descriptor.outputs) {
+      const v = outputs[p.name];
+      if (v !== undefined) return [p.name, v];
+    }
+    return Object.entries(outputs)[0];
+  })();
   // Source nodes (no input ports) show their param widgets inline for direct entry.
   const inlineParams =
     descriptor.inputs.length === 0

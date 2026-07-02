@@ -29,9 +29,15 @@ export function portColor(t: PortType): string {
   }
 }
 
-/** Mirrors `PortType::accepts` in Rust: `any` matches anything, else exact. */
+/** Mirrors `PortType::accepts` in Rust: `any` matches anything, exact matches,
+ * and a `text` input accepts scalar/list sources (coerced to string at the node
+ * boundary) so e.g. a width/height number can drive a text field or 文本输出. */
 export function canConnect(source: PortType, target: PortType): boolean {
-  return target === "any" || source === "any" || source === target;
+  if (target === "any" || source === "any" || source === target) return true;
+  return (
+    target === "text" &&
+    (source === "number" || source === "bool" || source === "stringList")
+  );
 }
 
 /** The port type a param exposes when "converted to input" (driven by a node). */

@@ -95,8 +95,21 @@ impl PortValue {
 
 impl PortType {
     /// Can a source of type `src` connect into an input of type `self`?
+    ///
+    /// Besides `Any` and exact matches, a `Text` input accepts scalar/list
+    /// sources (`Number` / `Bool` / `StringList`); the value is coerced to its
+    /// string form at the node boundary (see the executor's input coercion), so
+    /// e.g. a width/height number can drive a text field or 文本输出.
     pub fn accepts(self, src: PortType) -> bool {
-        self == PortType::Any || src == PortType::Any || self == src
+        if self == PortType::Any || src == PortType::Any || self == src {
+            return true;
+        }
+        matches!(
+            (self, src),
+            (PortType::Text, PortType::Number)
+                | (PortType::Text, PortType::Bool)
+                | (PortType::Text, PortType::StringList)
+        )
     }
 
     pub fn validate(self, value: &PortValue) -> bool {

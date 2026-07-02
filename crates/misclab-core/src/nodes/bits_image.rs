@@ -90,6 +90,7 @@ impl Node for ToBits {
         let img = load_image(i, "data")?;
         let (w, h) = img.dimensions();
         let invert = pbool(p, "invert", false);
+        let rows = pbool(p, "rows", true);
 
         let thr = if pbool(p, "otsu", false) {
             let mut hist = [0u32; 256];
@@ -109,7 +110,9 @@ impl Node for ToBits {
                 // dark → '1' by default (matches 1 → black in ToImage).
                 s.push(if dark ^ invert { '1' } else { '0' });
             }
-            s.push('\n');
+            if rows {
+                s.push('\n');
+            }
         }
 
         let mut m = PortMap::new();
@@ -154,6 +157,7 @@ pub fn register(reg: &mut NodeRegistry) {
                 ParamSpec::number("threshold", "阈值", 0.0, 255.0, 1.0, 128.0),
                 ParamSpec::toggle("otsu", "自动阈值(Otsu)", false),
                 ParamSpec::toggle("invert", "取反(亮=1)", false),
+                ParamSpec::toggle("rows", "按行换行", true),
             ],
         ),
         Arc::new(|| Arc::new(ToBits)),

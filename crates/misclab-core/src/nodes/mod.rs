@@ -74,6 +74,7 @@ mod reverse;
 mod rot13;
 mod rot47;
 mod rsa;
+mod selector;
 mod split;
 mod stegcloak;
 mod switch;
@@ -200,6 +201,7 @@ pub fn register_builtins(reg: &mut NodeRegistry) {
     // control / logic
     switch::register(reg);
     switch_case::register(reg);
+    selector::register(reg);
     compare::register(reg);
     logic::register(reg);
     gate::register(reg);
