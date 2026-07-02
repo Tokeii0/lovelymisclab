@@ -9,7 +9,7 @@ members = ["src-tauri", "crates/misclab-core"]
 version = "0.2.0"
 edition = "2021"
 authors = ["LovelyMiscLab"]
-license = "MIT"
+license = "GPL-3.0-only"
 
 [profile.dev]
 # Faster incremental builds during development.
