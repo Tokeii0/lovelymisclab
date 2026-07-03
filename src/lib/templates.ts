@@ -731,4 +731,35 @@ export const TEMPLATES: Template[] = [
     ],
     edges: [{ from: { node: "file", port: "bytes" }, to: { node: "fix", port: "data" } }],
   },
+  {
+    id: "archive-crack",
+    name: "压缩包密码爆破",
+    description:
+      "用字典爆破加密压缩包：导入压缩包 + 口令字典 → 通用口令爆破（目标=解压，判据「无报错」，错口令会解压失败）→ 得到密码与解出的内容。字典想用大字典文件时，把文本输入换成「文件导入」的文本输出即可。",
+    category: "取证/文件",
+    icon: Bomb,
+    nodes: [
+      { key: "file", descriptorId: "file_import", position: { x: 40, y: 110 } },
+      {
+        key: "dict",
+        descriptorId: "text_input",
+        position: { x: 40, y: 300 },
+        params: { text: "123456\npassword\nadmin\nletmein\nqwerty\niloveyou\nflag\nctf\ninfected\n7z" },
+      },
+      {
+        key: "crack",
+        descriptorId: "password_crack",
+        position: { x: 340, y: 200 },
+        params: { node: "archive_extract", passwordParam: "password", success: "无报错(能解出)" },
+      },
+      { key: "pw", descriptorId: "text_output", position: { x: 660, y: 110 } },
+      { key: "content", descriptorId: "text_output", position: { x: 660, y: 300 } },
+    ],
+    edges: [
+      { from: { node: "file", port: "bytes" }, to: { node: "crack", port: "data" } },
+      { from: { node: "dict", port: "text" }, to: { node: "crack", port: "wordlist" } },
+      { from: { node: "crack", port: "password" }, to: { node: "pw", port: "text" } },
+      { from: { node: "crack", port: "text" }, to: { node: "content", port: "text" } },
+    ],
+  },
 ];
