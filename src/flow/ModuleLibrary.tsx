@@ -5,10 +5,38 @@ import type { NodeDescriptor, PortSpec } from "@/lib/types";
 import { useDescriptorStore } from "@/store/descriptors";
 import { usePaletteDrag } from "@/store/paletteDrag";
 
+import { NODE_DESCRIPTIONS } from "./nodeDescriptions";
 import { nodeIcon } from "./nodeIcons";
 import { portColor } from "./portColors";
 
 const COLLAPSE_KEY = "misclab-collapsed-categories";
+
+// Logical display order for the categories (unlisted ones fall to the end).
+const CATEGORY_ORDER = [
+  "输入输出",
+  "编码/加密",
+  "进制转换",
+  "字符编码",
+  "加密解密",
+  "哈希/摘要",
+  "压缩包",
+  "隐写术",
+  "图像处理",
+  "文本处理",
+  "控制/逻辑",
+  "工具/分析",
+  "AI",
+  "自定义",
+];
+
+function catRank(c: string) {
+  const i = CATEGORY_ORDER.indexOf(c);
+  return i < 0 ? CATEGORY_ORDER.length : i;
+}
+
+function describe(d: NodeDescriptor) {
+  return NODE_DESCRIPTIONS[d.id] || d.description || "";
+}
 
 function Dots({ ports }: { ports: PortSpec[] }) {
   if (ports.length === 0) return <span className="text-muted-foreground/40">无</span>;
@@ -54,7 +82,8 @@ export function ModuleLibrary() {
     const filtered = list.filter(
       (d) =>
         d.displayName.toLowerCase().includes(needle) ||
-        d.category.toLowerCase().includes(needle)
+        d.category.toLowerCase().includes(needle) ||
+        describe(d).toLowerCase().includes(needle)
     );
     const map = new Map<string, NodeDescriptor[]>();
     for (const d of filtered) {
@@ -62,7 +91,7 @@ export function ModuleLibrary() {
       arr.push(d);
       map.set(d.category, arr);
     }
-    return Array.from(map.entries());
+    return Array.from(map.entries()).sort((a, b) => catRank(a[0]) - catRank(b[0]));
   }, [list, q]);
 
   const onPointerDown = (e: React.PointerEvent, d: NodeDescriptor) => {
@@ -83,7 +112,7 @@ export function ModuleLibrary() {
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="搜索模块…"
+          placeholder="搜索模块 / 说明…"
           className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
         />
       </div>
@@ -105,14 +134,15 @@ export function ModuleLibrary() {
                 <span className="text-[10px] opacity-60">{nodes.length}</span>
               </button>
               {!isCollapsed && (
-                <div className="grid grid-cols-2 gap-1.5 p-1">
+                <div className="space-y-1 p-1">
                   {nodes.map((d) => {
                     const Icon = nodeIcon(d.id, d.category);
+                    const desc = describe(d);
                     return (
                       <div
                         key={d.id}
                         onPointerDown={(e) => onPointerDown(e, d)}
-                        title={d.description || d.displayName}
+                        title={desc ? `${d.displayName}\n${desc}` : d.displayName}
                         className="cursor-grab touch-none select-none rounded-lg border border-border bg-background p-2 transition-all hover:border-primary hover:shadow-sm active:cursor-grabbing"
                       >
                         <div className="flex items-center gap-1.5">
@@ -122,15 +152,20 @@ export function ModuleLibrary() {
                           >
                             <Icon className="h-3.5 w-3.5" />
                           </span>
-                          <span className="truncate text-[11px] font-medium">
+                          <span className="min-w-0 flex-1 truncate text-[11px] font-medium">
                             {d.displayName}
                           </span>
+                          <span className="flex shrink-0 items-center gap-1 text-[9px] text-muted-foreground">
+                            <Dots ports={d.inputs} />
+                            <span className="opacity-50">→</span>
+                            <Dots ports={d.outputs} />
+                          </span>
                         </div>
-                        <div className="mt-1.5 flex items-center gap-1 text-[9px] text-muted-foreground">
-                          <Dots ports={d.inputs} />
-                          <span className="opacity-50">→</span>
-                          <Dots ports={d.outputs} />
-                        </div>
+                        {desc && (
+                          <div className="mt-1 line-clamp-2 pl-[30px] text-[10px] leading-snug text-muted-foreground">
+                            {desc}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
