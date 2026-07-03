@@ -108,6 +108,8 @@ mod bacon;
 mod bifid;
 mod bits_image;
 mod blind_watermark;
+mod blind_watermark_dual;
+mod cpython_random;
 mod bmp_padding;
 mod blowfish;
 mod braille;
@@ -144,6 +146,7 @@ mod sort_lines;
 mod string_match;
 mod substitution;
 mod substring;
+mod text_blind_watermark;
 mod unicode_escape;
 mod unique_lines;
 mod whitespace_stego;
@@ -254,6 +257,7 @@ pub fn register_builtins(reg: &mut NodeRegistry) {
     sort_lines::register(reg);
     unique_lines::register(reg);
     substring::register(reg);
+    text_blind_watermark::register(reg);
     regex_replace::register(reg);
     pad_lines::register(reg);
     caesar::register(reg);
@@ -295,6 +299,7 @@ pub fn register_builtins(reg: &mut NodeRegistry) {
     png_fix::register(reg);
     jpg_fix::register(reg);
     blind_watermark::register(reg);
+    blind_watermark_dual::register(reg);
     bits_image::register(reg);
     pixel_image::register(reg);
     // ai

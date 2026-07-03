@@ -610,6 +610,39 @@ export const TEMPLATES: Template[] = [
 
   // ---------------------------------------------------------------- 隐写术
   {
+    id: "image-stego-triage",
+    name: "图片隐写一键尝试",
+    description:
+      "导入一张图片后并行跑一遍常见图片隐写检查：识别真实类型/后缀（识破改错的扩展名或藏在图里的其它文件）、读 EXIF 与注释、提取 LSB 载荷、抽位平面肉眼看隐藏图案，并在原始字节里正则搜 flag。拿到图片先跑这个。",
+    category: "隐写术",
+    icon: Wand2,
+    nodes: [
+      { key: "file", descriptorId: "file_import", position: { x: 40, y: 340 } },
+      { key: "ft", descriptorId: "detect_file_type", position: { x: 340, y: 40 } },
+      { key: "ftout", descriptorId: "text_output", position: { x: 640, y: 40 } },
+      { key: "exif", descriptorId: "exif_extract", position: { x: 340, y: 190 } },
+      { key: "exifout", descriptorId: "text_output", position: { x: 640, y: 190 } },
+      { key: "lsb", descriptorId: "lsb_extract", position: { x: 340, y: 340 }, params: { channels: "RGB", bit: 0 } },
+      { key: "lsbout", descriptorId: "text_output", position: { x: 640, y: 340 } },
+      { key: "dec", descriptorId: "decode_text", position: { x: 340, y: 490 }, params: { charset: "ISO-8859-1" } },
+      { key: "ext", descriptorId: "extract", position: { x: 640, y: 490 }, params: { kind: "flag", unique: true } },
+      { key: "extout", descriptorId: "text_output", position: { x: 940, y: 490 } },
+      { key: "bp", descriptorId: "bit_plane", position: { x: 340, y: 640 }, params: { channel: "R", bit: 0 } },
+    ],
+    edges: [
+      { from: { node: "file", port: "bytes" }, to: { node: "ft", port: "data" } },
+      { from: { node: "ft", port: "text" }, to: { node: "ftout", port: "text" } },
+      { from: { node: "file", port: "bytes" }, to: { node: "exif", port: "data" } },
+      { from: { node: "exif", port: "text" }, to: { node: "exifout", port: "text" } },
+      { from: { node: "file", port: "bytes" }, to: { node: "lsb", port: "data" } },
+      { from: { node: "lsb", port: "text" }, to: { node: "lsbout", port: "text" } },
+      { from: { node: "file", port: "bytes" }, to: { node: "dec", port: "data" } },
+      { from: { node: "dec", port: "text" }, to: { node: "ext", port: "text" } },
+      { from: { node: "ext", port: "text" }, to: { node: "extout", port: "text" } },
+      { from: { node: "file", port: "bytes" }, to: { node: "bp", port: "data" } },
+    ],
+  },
+  {
     id: "lsb-extract",
     name: "LSB 位隐写提取",
     description: "导入 PNG/BMP，按位平面读取 RGB 最低位拼回隐藏数据。图片隐写第一梯队。",
