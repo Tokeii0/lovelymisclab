@@ -117,6 +117,7 @@ export const NODE_DESCRIPTIONS: Record<string, string> = {
   zero_width_decode: "从零宽字符还原秘密（自动识别）。",
   lsb_extract: "读取图片 RGB 最低位平面拼回数据。",
   text_blind_watermark: "提取 text_blind_watermark 藏在文本里的水印（DEL/零宽字符 + 密码，复刻 CPython 随机数）。",
+  guofei_bwm_extract: "提取 guofei9987/blind_watermark（DWT-DCT-SVD）藏的水印，无须原图，需水印大小 + 密码（逆自官方库，numpy 随机数复刻）。",
   stegcloak_hide: "StegCloak 把秘密藏进文本零宽字符。",
   stegcloak_reveal: "StegCloak 解出文本里的秘密（可带密码）。",
   whitespace_encode: "SNOW 空白隐写（空格/制表位）。",

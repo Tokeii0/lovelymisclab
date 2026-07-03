@@ -141,6 +141,35 @@ impl Mt {
             x.swap(i, j.min(i));
         }
     }
+
+    /// numpy `RandomState.shuffle` — Fisher-Yates with `rk_interval` (uses the LOW
+    /// bits of the raw MT output with a power-of-two mask + rejection to [0, i]).
+    pub fn numpy_shuffle<T>(&mut self, x: &mut [T]) {
+        for i in (1..x.len()).rev() {
+            let mut mask = i as u32;
+            mask |= mask >> 1;
+            mask |= mask >> 2;
+            mask |= mask >> 4;
+            mask |= mask >> 8;
+            mask |= mask >> 16;
+            let j = loop {
+                let v = self.genrand() & mask;
+                if v <= i as u32 {
+                    break v as usize;
+                }
+            };
+            x.swap(i, j);
+        }
+    }
+}
+
+/// Seed like numpy `RandomState(seed)` for a uint32 seed: `init_genrand` (NOT the
+/// `init_by_array` that CPython's `random.seed(int)` uses). `.random_f64()` then
+/// reproduces `RandomState.random()`.
+pub fn mt_numpy(seed: u32) -> Mt {
+    let mut m = Mt::new();
+    m.init_genrand(seed);
+    m
 }
 
 /// Seed from an integer written as a decimal string (CPython `random.seed(int)`).
@@ -181,6 +210,18 @@ mod tests {
         let mut m2 = mt_from_str("secret");
         let seq2: Vec<u8> = (0..8).map(|_| m2.randint_byte()).collect();
         assert_eq!(seq2, [3, 66, 32, 224, 181, 132, 109, 12]);
+    }
+
+    #[test]
+    fn numpy_random_and_shuffle() {
+        // np.random.RandomState(1).random(5)[0] == 0.417022004702574
+        let mut m = mt_numpy(1);
+        assert!((m.random_f64() - 0.417022004702574).abs() < 1e-12);
+        // np.random.RandomState(1).shuffle(arange(79)) == [63, 27, 31, 69, 46, ...]
+        let mut m2 = mt_numpy(1);
+        let mut v: Vec<u32> = (0..79).collect();
+        m2.numpy_shuffle(&mut v);
+        assert_eq!(&v[..5], &[63, 27, 31, 69, 46]);
     }
 
     #[test]

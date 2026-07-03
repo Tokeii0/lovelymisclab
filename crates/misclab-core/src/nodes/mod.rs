@@ -108,6 +108,7 @@ mod bacon;
 mod bifid;
 mod bits_image;
 mod blind_watermark;
+mod blind_watermark_bwm;
 mod blind_watermark_dual;
 mod cpython_random;
 mod bmp_padding;
@@ -300,6 +301,7 @@ pub fn register_builtins(reg: &mut NodeRegistry) {
     jpg_fix::register(reg);
     blind_watermark::register(reg);
     blind_watermark_dual::register(reg);
+    blind_watermark_bwm::register(reg);
     bits_image::register(reg);
     pixel_image::register(reg);
     // ai

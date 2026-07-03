@@ -175,6 +175,7 @@ const NODE_ICONS: Record<string, LucideIcon> = {
   archive_extract: FileArchive,
   zero_width_decode: ScanEye,
   text_blind_watermark: EyeOff,
+  guofei_bwm_extract: Fingerprint,
   zero_width_encode: EyeOff,
   stegcloak_hide: LockKeyhole,
   stegcloak_reveal: KeyRound,
