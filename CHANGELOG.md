@@ -2,6 +2,12 @@
 
 本项目所有值得注意的变更都会记录在此文件。版本遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.2.5] - 2026-07-03
+
+### 修复
+
+- **MCP 工具列表校验失败（tools fetch failed）** —— `set_param` 工具的 `value` 入参是裸 `serde_json::Value`，schemars 会为其生成布尔 `true` 属性 schema；Claude 等 MCP 客户端拒绝布尔属性 schema，进而丢弃整个 `tools/list`，表现为连接正常却「工具全部不可用」。为该参数补上文档注释，将其提升为合法的对象 schema 修复；并在集成测试中新增回归断言，保证每个工具入参的属性 schema 均为对象。
+
 ## [0.2.4] - 2026-07-03
 
 ### 新增
