@@ -148,6 +148,7 @@ const NODE_ICONS: Record<string, LucideIcon> = {
   rot13: RotateCw,
   xor: Zap,
   xor_bruteforce: Bomb,
+  hash_crack: Bomb,
   loop_decode: Repeat,
   magic_decode: Wand2,
   qr_encode: QrCode,

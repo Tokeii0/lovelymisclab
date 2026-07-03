@@ -10,7 +10,7 @@ fn digest_hex<D: Digest>(data: &[u8]) -> String {
     hex::encode(h.finalize())
 }
 
-fn hash_hex(algo: &str, data: &[u8]) -> Result<String, CoreError> {
+pub(crate) fn hash_hex(algo: &str, data: &[u8]) -> Result<String, CoreError> {
     Ok(match algo {
         "MD5" => digest_hex::<md5::Md5>(data),
         "MD4" => digest_hex::<md4::Md4>(data),

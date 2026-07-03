@@ -374,3 +374,40 @@ fn jwt_decode_payload() {
     let payload = t("jwt_decode", jwt, json!({}));
     assert!(payload.contains("John Doe") && payload.contains("1234567890"), "got {payload}");
 }
+
+#[test]
+fn hash_crack_dictionary() {
+    let reg = default_registry();
+    let bool_of = |m: &HashMap<String, PortValue>, k: &str| match m.get(k) {
+        Some(PortValue::Bool(b)) => *b,
+        o => panic!("expected Bool at '{k}', got {o:?}"),
+    };
+    let crack = |hash: &str, words: Vec<&str>, params: Value| {
+        let mut inputs = HashMap::new();
+        inputs.insert("hash".to_string(), PortValue::Text(hash.to_string()));
+        inputs.insert(
+            "wordlist".to_string(),
+            PortValue::StringList(words.into_iter().map(String::from).collect()),
+        );
+        GraphExecutor::run_node(&reg, "hash_crack", &inputs, &params, &NullSink, &CancellationToken::new()).unwrap()
+    };
+
+    // MD5("password") — classic.
+    let hit = crack(
+        "5f4dcc3b5aa765d61d8327deb882cf99",
+        vec!["admin", "123456", "password", "root"],
+        json!({ "algorithm": "MD5" }),
+    );
+    assert_eq!(text_of(&hit, "text"), "password");
+    assert!(bool_of(&hit, "found"));
+
+    // Miss.
+    let miss = crack("5f4dcc3b5aa765d61d8327deb882cf99", vec!["nope"], json!({ "algorithm": "MD5" }));
+    assert_eq!(text_of(&miss, "text"), "");
+    assert!(!bool_of(&miss, "found"));
+
+    // Salted: target from the `hash` node = MD5("s4lt" + "secret"), then crack with prefix salt.
+    let target = text_of(&run("hash", "data", "s4ltsecret", json!({ "algorithm": "MD5" })), "text");
+    let salted = crack(&target, vec!["x", "secret"], json!({ "algorithm": "MD5", "salt": "s4lt", "saltMode": "前缀" }));
+    assert_eq!(text_of(&salted, "text"), "secret");
+}

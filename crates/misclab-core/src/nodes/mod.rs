@@ -41,6 +41,7 @@ mod filetype;
 mod filter_list;
 mod gate;
 mod hash;
+mod hash_crack;
 mod hex;
 mod image_advanced;
 mod image_blend;
@@ -187,6 +188,7 @@ pub fn register_builtins(reg: &mut NodeRegistry) {
     pixeljihad::register(reg);
     // hashes / MACs
     hash::register(reg);
+    hash_crack::register(reg);
     bcrypt::register(reg);
     // radix / number bases
     radix::register(reg);

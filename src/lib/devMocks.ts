@@ -514,6 +514,7 @@ const fmt = (name: string, label: string, def: string) =>
   sel(name, label, ["UTF8", "Hex", "Base64"], def);
 
 pushDesc("hash", "哈希/摘要", "哈希计算", CYAN, anyIn(), [p("text", "摘要(hex)", "text")], [sel("algorithm", "算法", HASH_ALGOS, "SHA256")]);
+pushDesc("hash_crack", "哈希/摘要", "哈希爆破", CYAN, [p("hash", "目标哈希(hex)", "text"), p("wordlist", "字典", "any")], [p("text", "明文", "text"), p("found", "命中", "bool", false), p("report", "信息", "text", false)], [sel("algorithm", "算法", HASH_ALGOS, "MD5"), txt("salt", "盐(可选)", ""), sel("saltMode", "加盐位置", ["无", "前缀", "后缀"], "无")]);
 pushDesc("hmac", "哈希/摘要", "HMAC", CYAN, anyIn(), [p("text", "摘要(hex)", "text")], [sel("algorithm", "算法", ["SHA256", "SHA1", "MD5", "SHA512"], "SHA256"), txt("key", "密钥", ""), sel("keyFormat", "密钥格式", ["UTF8", "Hex", "Base64"], "UTF8")]);
 pushDesc("radix_convert", "进制转换", "进制转换", SLATE, [p("text", "数字", "text")], [p("text", "结果", "text")], [num("from", "源进制", 2, 36, 1, 10), num("to", "目标进制", 2, 36, 1, 16)]);
 pushDesc("to_binary", "进制转换", "转二进制", SLATE, anyIn(), textOut(), [sel("delimiter", "分隔符", ["空格", "无", "逗号"], "空格")]);
