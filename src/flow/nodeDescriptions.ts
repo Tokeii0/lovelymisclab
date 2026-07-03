@@ -180,6 +180,7 @@ export const NODE_DESCRIPTIONS: Record<string, string> = {
   gif_timing: "解码 GIF 每帧显示时长（厘秒）：可当字节转 ASCII 或阈值二值化——flag 常藏在帧间隔里。",
   zip_crc_crack: "ZIP CRC 爆破：对未压缩长度很小的条目，按字符集枚举明文匹配存储的 CRC-32，还原被拆成几字节的 flag。",
   zsteg_scan: "zsteg 式 LSB 全组合扫描：位平面×通道×位序×遍历方向逐一提取并按可读性/flag 正则打分，列出最可能的隐写内容。",
+  rabbit: "Rabbit 流密码（eSTREAM / RFC 4503）：128 位密钥 + 可选 64 位 IV，加解密对称；密钥/IV 按大端字节序，对拍 RFC 测试向量。",
   audio_info: "解析 WAV 头：采样率、声道、位深、时长（音频隐写第一步）。仅支持 WAV/PCM。",
   audio_spectrogram: "把 WAV 画成频谱图（STFT），显现藏在频域里的文字或图案——音频隐写最常见套路。",
   wav_lsb: "提取 WAV 采样最低有效位里隐藏的数据（stegolsb/wavsteg 那类），按位打包成字节。",

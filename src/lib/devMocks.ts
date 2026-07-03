@@ -662,6 +662,7 @@ pushDesc("pgp_dearmor", "加密解密", "PGP 解甲(Dearmor)", ROSE, textIn(), [
 pushDesc("pgp_enarmor", "加密解密", "PGP 装甲(Enarmor)", ROSE, anyIn(), textOut(), [sel("blockType", "块类型", ["MESSAGE", "PUBLIC KEY BLOCK", "PRIVATE KEY BLOCK", "SIGNATURE"], "MESSAGE")]);
 pushDesc("pgp_decrypt", "加密解密", "PGP 解密", ROSE, [p("text", "PGP 消息", "text"), p("key", "私钥(armored)", "text")], [p("text", "明文", "text"), p("bytes", "字节", "bytes", false), p("hex", "hex", "text", false)], [txt("passphrase", "口令(可空)", "")]);
 pushDesc("cryptojs_aes", "加密解密", "CryptoJS AES 解密", ROSE, [p("text", "密文(base64)", "text"), p("wordlist", "字典(可选爆破)", "any", false)], [p("text", "明文", "text"), p("bytes", "字节", "bytes", false), p("report", "信息", "text", false)], [txt("password", "口令", ""), sel("keySize", "密钥长度", ["128", "192", "256"], "256"), sel("outputFormat", "输出格式", ["UTF8", "Hex", "Base64"], "UTF8")]);
+pushDesc("rabbit", "加密解密", "Rabbit 流密码", ROSE, [p("text", "输入", "text")], [p("text", "结果", "text"), p("bytes", "字节", "bytes", false)], [txt("key", "密钥(16字节)", ""), sel("keyFormat", "密钥格式", ["Hex", "UTF8", "Base64"], "Hex"), txt("iv", "IV(0或8字节)", ""), sel("ivFormat", "IV 格式", ["Hex", "UTF8", "Base64"], "Hex"), sel("inputFormat", "输入格式", ["UTF8", "Hex", "Base64"], "UTF8"), sel("outputFormat", "输出格式", ["Hex", "Base64", "UTF8"], "Hex")]);
 
 // 图像处理
 const IMGF = "#d946ef", IMGI = "#6366f1", IMGT = "#14b8a6";

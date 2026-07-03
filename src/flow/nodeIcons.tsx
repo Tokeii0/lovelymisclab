@@ -308,6 +308,7 @@ const NODE_ICONS: Record<string, LucideIcon> = {
   gif_timing: Clock,
   zip_crc_crack: Bomb,
   zsteg_scan: ScanEye,
+  rabbit: KeyRound,
   blind_watermark: Waves,
   blind_watermark_dual: Diff,
   bits_to_image: Grid2x2,
