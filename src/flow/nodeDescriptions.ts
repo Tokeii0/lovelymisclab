@@ -105,6 +105,7 @@ export const NODE_DESCRIPTIONS: Record<string, string> = {
   hmac: "HMAC 消息认证码。",
   bcrypt: "bcrypt 哈希或口令校验。",
   hash_crack: "字典爆破哈希，逐词比对求明文（含加盐）。",
+  password_crack: "通用口令爆破：字典驱动任意目标节点，按无报错/正则/可打印判定命中。",
 
   // 压缩包
   compress: "Gzip / Zlib / Raw Deflate 压缩。",

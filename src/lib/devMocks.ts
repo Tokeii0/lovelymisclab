@@ -596,6 +596,7 @@ pushDesc("to_octal", "进制转换", "转八进制", SLATE, anyIn(), textOut(), 
 pushDesc("from_octal", "进制转换", "八进制转文本", SLATE, textIn(), decOut(), []);
 
 pushDesc("entropy", "工具/分析", "香农熵", AMBER, anyIn(), [p("entropy", "熵", "number"), p("text", "说明", "text", false)], []);
+pushDesc("password_crack", "工具/分析", "通用口令爆破", AMBER, [p("data", "目标输入", "any"), p("wordlist", "字典", "any")], [p("password", "命中口令", "text"), p("text", "解出文本", "text", false), p("bytes", "解出字节", "bytes", false), p("found", "命中", "bool", false), p("report", "信息", "text", false)], [txt("node", "目标节点 id", "cloacked_pixel_extract"), txt("passwordParam", "口令参数名", "password"), sel("success", "成功判据", ["无报错(能解出)", "正则命中", "可打印文本"], "无报错(能解出)"), txt("pattern", "正则(正则命中判据)", "flag\\{"), txt("checkPort", "检查的输出端口(留空自动)", ""), txt("inputPort", "目标输入端口(留空自动)", ""), txt("extraParams", "目标额外参数(JSON)", "")]);
 t2t("char_frequency", "工具/分析", "字符频率", AMBER, []);
 t2t("defang", "工具/分析", "Defang/Refang", AMBER, [sel("operation", "操作", ["defang", "refang"], "defang")]);
 pushDesc("jwt_decode", "工具/分析", "JWT 解码", CYAN, textIn(), [p("text", "载荷", "text"), p("payload", "payload", "text", false), p("header", "header", "text", false)], []);

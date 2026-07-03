@@ -116,6 +116,7 @@ mod html_entity;
 mod morse;
 mod octal;
 mod pad_lines;
+mod password_crack;
 mod pgp_armor;
 mod pgp_decrypt;
 mod pixel_image;
@@ -257,6 +258,7 @@ pub fn register_builtins(reg: &mut NodeRegistry) {
     timestamp::register(reg);
     filetype::register(reg);
     extract::register(reg);
+    password_crack::register(reg);
     rotate_bytes::register(reg);
     exif_meta::register(reg);
     // image processing

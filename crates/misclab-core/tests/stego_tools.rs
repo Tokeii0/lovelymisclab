@@ -88,24 +88,64 @@ fn cloacked_pixel_roundtrip() {
     assert_eq!(bytes_of(&out, "bytes"), payload);
 }
 
+// ------------------------------------------------- 通用口令爆破 (password_crack)
 #[test]
-fn cloacked_pixel_wrong_password_fails() {
+fn password_crack_drives_cloacked_pixel() {
+    let payload = b"flag{brute_generic}".to_vec();
     let emb = run(
         "cloacked_pixel_embed",
-        &[
-            ("data", img_bytes(&cover(48, 48))),
-            ("file", raw(b"secret")),
-        ],
+        &[("data", img_bytes(&cover(64, 64))), ("file", raw(&payload))],
+        json!({ "password": "swordfish" }),
+    );
+    let stego = bytes_of(&emb, "bytes");
+    let wl = |v: &[&str]| PortValue::StringList(v.iter().map(|s| s.to_string()).collect());
+
+    // 正则命中判据：只有正确口令解出的内容才含 flag{（cloacked 填充校验弱，用输出内容判定更稳）。
+    let out = run(
+        "password_crack",
+        &[("data", raw(&stego)), ("wordlist", wl(&["a", "letmein", "swordfish", "z"]))],
+        json!({ "node": "cloacked_pixel_extract", "success": "正则命中", "pattern": "flag\\{" }),
+    );
+    assert_eq!(text_of(&out, "password"), "swordfish");
+    assert_eq!(bytes_of(&out, "bytes"), payload); // 顺带解出了载荷
+
+    // 可打印文本判据也能命中（正确口令 → 可读文本；错口令 → 乱码）。
+    let printable = run(
+        "password_crack",
+        &[("data", raw(&stego)), ("wordlist", wl(&["a", "swordfish"]))],
+        json!({ "node": "cloacked_pixel_extract", "success": "可打印文本" }),
+    );
+    assert_eq!(text_of(&printable, "password"), "swordfish");
+
+    // 只含错误口令 → 未命中。
+    let miss = run(
+        "password_crack",
+        &[("data", raw(&stego)), ("wordlist", wl(&["nope", "wrong"]))],
+        json!({ "node": "cloacked_pixel_extract", "success": "正则命中", "pattern": "flag\\{" }),
+    );
+    assert_eq!(text_of(&miss, "password"), "");
+    match miss.get("found") {
+        Some(PortValue::Bool(b)) => assert!(!b),
+        o => panic!("{o:?}"),
+    }
+}
+
+#[test]
+fn cloacked_pixel_wrong_password() {
+    let payload = b"the real secret payload";
+    let emb = run(
+        "cloacked_pixel_embed",
+        &[("data", img_bytes(&cover(48, 48))), ("file", raw(payload))],
         json!({ "password": "right" }),
     );
     let stego = bytes_of(&emb, "bytes");
-    // Wrong password → padding/decrypt fails → node errors.
-    assert!(try_run(
-        "cloacked_pixel_extract",
-        &[("data", raw(&stego))],
-        json!({ "password": "wrong" })
-    )
-    .is_err());
+    // A wrong password never recovers the real payload: usually the padding check
+    // errors; occasionally (weak 32-byte pad) it "succeeds" with garbage — but that
+    // garbage is never the original. (Random IV makes an is_err()-only assert flaky.)
+    match try_run("cloacked_pixel_extract", &[("data", raw(&stego))], json!({ "password": "wrong" })) {
+        Ok(out) => assert_ne!(bytes_of(&out, "bytes"), payload.to_vec(), "wrong password must not recover the payload"),
+        Err(_) => {}
+    }
 }
 
 // ================================================================= ImageMask
