@@ -342,8 +342,12 @@ export function ModuleRunDialog({
     }
   };
 
-  const Field = ({ p }: { p: ParamSpec }) => (
-    <div>
+  // NOTE: This is a render helper, NOT a component. It must be *called*
+  // (`field(p)`), never used as `<Field/>`. Rendering it as a nested component
+  // would create a fresh component identity on every keystroke, remounting the
+  // <input> inside and losing focus after a single character.
+  const field = (p: ParamSpec, key?: React.Key) => (
+    <div key={key}>
       <label className="mb-1 block text-[11px] font-medium text-muted-foreground">{p.label}</label>
       {control(p)}
     </div>
@@ -424,7 +428,7 @@ export function ModuleRunDialog({
                 <div className="mt-2 space-y-3">
                   {rows.map((row, i) =>
                     row.kind === "single" ? (
-                      <Field key={i} p={row.p} />
+                      field(row.p, i)
                     ) : (
                       <div
                         key={i}
@@ -435,8 +439,8 @@ export function ModuleRunDialog({
                             : "grid-cols-2"
                         )}
                       >
-                        <Field p={row.a} />
-                        <Field p={row.b} />
+                        {field(row.a)}
+                        {field(row.b)}
                       </div>
                     )
                   )}

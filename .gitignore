@@ -27,3 +27,4 @@ target/*
 .vscode/*
 .claude/*
 .workbuddy/memory/2026-07-02.md
+crates/misclab-core/tests/*
