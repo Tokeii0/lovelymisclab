@@ -8,30 +8,9 @@ import { useGraphStore, type FlowNode } from "@/store/graph";
 import { useInspectorStore, type InspectorTab as Tab } from "@/store/inspector";
 
 import { nodeIcon } from "./nodeIcons";
+import { valueText } from "./portValue";
 import { executeToNode, runSingleNode } from "./runner";
 import { WidgetRenderer } from "./WidgetRenderer";
-
-function valueText(v: PortValue): string {
-  switch (v.type) {
-    case "text":
-      return v.value;
-    case "number":
-      return String(v.value);
-    case "bool":
-      return v.value ? "true" : "false";
-    case "stringList":
-      return v.value.join("\n");
-    case "candidates":
-      return v.value.map((c) => `${c.score.toFixed(2)}  ${c.text}`).join("\n");
-    case "bytes":
-      return `<${v.value.length} 字节>`;
-    case "json":
-    case "fingerprint":
-      return JSON.stringify(v.value, null, 2);
-    default:
-      return "";
-  }
-}
 
 function CopyButton({ text }: { text: string }) {
   const [done, setDone] = useState(false);

@@ -19,12 +19,14 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { OutputValue } from "@/flow/portValue";
 import { inTauri } from "@/lib/devMocks";
 import { openFlowPath, readAutoDraft, restoreAutoDraft } from "@/lib/project";
+import type { PortValue } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useDescriptorStore } from "@/store/descriptors";
 import { useGraphStore } from "@/store/graph";
-import { useRunStore, type RunHistoryEntry, type RunStatus } from "@/store/run";
+import { useRunStore, type RunHistoryEntry, type RunHistoryNode, type RunStatus } from "@/store/run";
 import { useViewStore } from "@/store/view";
 import {
   useWorkspaceStore,
@@ -110,9 +112,46 @@ function RunListItem({
   );
 }
 
+function nodeStatusTone(s: string) {
+  return s === "done"
+    ? "bg-green-500/15 text-green-600"
+    : s === "error"
+      ? "bg-destructive/10 text-destructive"
+      : s === "running"
+        ? "bg-blue-500/15 text-blue-600"
+        : "bg-secondary text-muted-foreground";
+}
+
+/** The actual output ports a node produced, rendered by type. */
+function NodeOutputs({ node }: { node: RunHistoryNode }) {
+  const byId = useDescriptorStore((s) => s.byId);
+  if (!node.outputs || Object.keys(node.outputs).length === 0) return null;
+  const desc = byId[node.descriptorId];
+  const specs = desc?.outputs ?? [];
+  const ordered: [string, PortValue][] = [
+    ...specs
+      .filter((o) => node.outputs![o.name] !== undefined)
+      .map((o) => [o.name, node.outputs![o.name]] as [string, PortValue]),
+    ...Object.entries(node.outputs).filter(([k]) => !specs.some((o) => o.name === k)),
+  ];
+  return (
+    <div className="mt-2 space-y-2 border-t border-border/60 pt-2">
+      {ordered.map(([port, val]) => (
+        <div key={port}>
+          <div className="mb-0.5 text-[10px] font-medium text-muted-foreground">
+            {specs.find((o) => o.name === port)?.label ?? port}
+          </div>
+          <OutputValue value={val} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function RunDetail({ entry }: { entry: RunHistoryEntry }) {
   const failed = entry.nodes.filter((n) => n.status === "error").length;
   const done = entry.nodes.filter((n) => n.status === "done").length;
+  const withOutputs = entry.nodes.filter((n) => n.outputs && Object.keys(n.outputs).length > 0);
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="border-b border-border px-4 py-3">
@@ -145,24 +184,39 @@ function RunDetail({ entry }: { entry: RunHistoryEntry }) {
         )}
       </div>
 
-      <div className="grid min-h-0 flex-1 grid-cols-[260px_1fr]">
-        <div className="min-h-0 overflow-y-auto border-r border-border p-3">
-          <div className="mb-2 text-xs font-semibold text-muted-foreground">节点结果</div>
-          <div className="space-y-1.5">
+      <div className="grid min-h-0 flex-1 grid-cols-[1fr_300px]">
+        <div className="min-h-0 overflow-y-auto p-3">
+          <div className="mb-2 text-xs font-semibold text-muted-foreground">
+            节点结果与输出值
+          </div>
+          <div className="space-y-2">
             {entry.nodes.map((node) => (
-              <div key={node.id} className="rounded-md border border-border bg-card px-2 py-1.5">
+              <div key={node.id} className="rounded-md border border-border bg-card px-2.5 py-2">
                 <div className="flex items-center justify-between gap-2">
                   <span className="min-w-0 truncate text-xs font-medium">{node.label}</span>
-                  <span className="text-[10px] text-muted-foreground">{node.status}</span>
+                  <span
+                    className={cn(
+                      "shrink-0 rounded px-1.5 py-0.5 text-[10px]",
+                      nodeStatusTone(node.status)
+                    )}
+                  >
+                    {node.status}
+                  </span>
                 </div>
                 {node.error && (
-                  <div className="mt-1 line-clamp-2 text-[10px] text-destructive">{node.error}</div>
+                  <div className="mt-1 line-clamp-3 text-[10px] text-destructive">{node.error}</div>
                 )}
+                <NodeOutputs node={node} />
               </div>
             ))}
           </div>
+          {withOutputs.length === 0 && !entry.error && (
+            <div className="mt-2 text-[11px] text-muted-foreground">
+              本次运行未捕获到输出值（可能在浏览器预览中运行，或节点无输出）。
+            </div>
+          )}
         </div>
-        <div className="min-h-0 overflow-y-auto p-3">
+        <div className="min-h-0 overflow-y-auto border-l border-border p-3">
           <div className="mb-2 flex items-center gap-1 text-xs font-semibold text-muted-foreground">
             <Clock3 className="h-3.5 w-3.5" />
             事件流

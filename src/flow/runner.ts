@@ -102,6 +102,42 @@ function handleEvent(m: ProgressMsg) {
   }
 }
 
+/** Truncate an output value so run history stays small enough for localStorage. */
+function sanitizeValue(v: PortValue): PortValue {
+  const cap = (s: string, max: number) => (s.length > max ? `${s.slice(0, max)}…` : s);
+  switch (v.type) {
+    case "text":
+      return { type: "text", value: cap(v.value, 20000) };
+    case "bytes":
+      return { type: "bytes", value: v.value.slice(0, 8192) };
+    case "image":
+      // Keep the data-URL unless it's very large (would bloat localStorage).
+      return v.value.length > 300000
+        ? { type: "text", value: "[图片较大，未在记录中保存预览]" }
+        : v;
+    case "stringList":
+      return { type: "stringList", value: v.value.slice(0, 200).map((s) => cap(s, 2000)) };
+    case "candidates":
+      return { type: "candidates", value: v.value.slice(0, 50) };
+    case "json":
+    case "fingerprint": {
+      const s = JSON.stringify(v.value);
+      return s && s.length > 8000 ? { type: "text", value: cap(s, 8000) } : v;
+    }
+    default:
+      return v;
+  }
+}
+
+function sanitizeOutputs(
+  outputs?: Record<string, PortValue>
+): Record<string, PortValue> | undefined {
+  if (!outputs) return undefined;
+  const out: Record<string, PortValue> = {};
+  for (const [k, v] of Object.entries(outputs)) out[k] = sanitizeValue(v);
+  return Object.keys(out).length ? out : undefined;
+}
+
 function historyNodes() {
   const byId = useDescriptorStore.getState().byId;
   return useGraphStore.getState().nodes.map((n) => ({
@@ -110,6 +146,7 @@ function historyNodes() {
     descriptorId: n.data.descriptorId,
     status: n.data.status,
     error: n.data.error,
+    outputs: sanitizeOutputs(n.data.outputs),
   }));
 }
 

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-import type { ProgressMsg } from "@/lib/types";
+import type { PortValue, ProgressMsg } from "@/lib/types";
 
 export type RunMode = "idle" | "live" | "paused";
 export type RunStatus = "running" | "success" | "error" | "cancelled";
@@ -11,6 +11,8 @@ export interface RunHistoryNode {
   descriptorId: string;
   status: string;
   error?: string;
+  /** Snapshot of the node's output ports (size-limited for storage). */
+  outputs?: Record<string, PortValue>;
 }
 
 export interface RunHistoryEvent {
