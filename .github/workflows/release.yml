@@ -55,15 +55,29 @@ jobs:
           Copy-Item $src $dst
           "ASSET=$dst" | Out-File -FilePath $env:GITHUB_ENV -Append
 
+      # Shrink the standalone exe with UPX before publishing.
+      - name: Compress with UPX
+        shell: pwsh
+        run: |
+          choco install upx -y --no-progress
+          $before = (Get-Item "${{ env.ASSET }}").Length
+          upx --lzma --best "${{ env.ASSET }}"
+          $after = (Get-Item "${{ env.ASSET }}").Length
+          "UPX: {0:N0} -> {1:N0} bytes ({2:P1})" -f $before, $after, ($after / $before)
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: "LovelyMiscLab ${{ github.ref_name }}"
           body: |
-            单文件绿色版，免安装。下载后双击 `${{ env.ASSET }}` 即可运行。
+            单文件绿色版，免安装（已用 UPX --lzma --best 压缩）。下载后双击 `${{ env.ASSET }}` 即可运行。
 
             > 依赖系统自带的 WebView2 运行时（Windows 10/11 已内置）。
+
+            ---
+          append_body: true
+          generate_release_notes: true
           draft: true
           prerelease: false
           files: ${{ env.ASSET }}
