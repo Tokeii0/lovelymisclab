@@ -126,8 +126,16 @@ pub struct ConnectArgs {
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct SetParamArgs {
+    /// The canvas node id.
     pub node_id: String,
+    /// The parameter name (as shown in the node's `params`).
     pub name: String,
+    /// The new value (any JSON: string/number/bool/object/array).
+    ///
+    /// The doc comment here is load-bearing: without it schemars emits a bare
+    /// `true` schema for this `serde_json::Value`, and MCP clients (Claude)
+    /// reject a boolean property schema — failing validation of the *entire*
+    /// `tools/list` response. A description promotes it to an object schema.
     pub value: serde_json::Value,
 }
 

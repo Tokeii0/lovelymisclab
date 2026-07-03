@@ -101,6 +101,30 @@ fn server_end_to_end_over_http() {
         assert!(tools.contains(expected), "tools/list missing {expected}: {tools}");
     }
 
+    // Regression guard: every tool's inputSchema properties must be OBJECT
+    // schemas. A bare `serde_json::Value` field (no doc comment / #[serde(default)])
+    // makes schemars emit a boolean `true` property schema, which MCP clients
+    // (Claude) reject — failing validation of the *entire* tools/list. See
+    // `SetParamArgs::value` in server.rs.
+    let json_line = tools
+        .lines()
+        .find(|l| l.contains("\"jsonrpc\"") && l.contains("\"tools\""))
+        .map(|l| l.trim_start_matches("data:").trim())
+        .expect("tools/list JSON line");
+    let parsed: serde_json::Value = serde_json::from_str(json_line).expect("tools/list is JSON");
+    for tool in parsed["result"]["tools"].as_array().expect("tools array") {
+        let name = tool["name"].as_str().unwrap_or("?");
+        if let Some(props) = tool["inputSchema"]["properties"].as_object() {
+            for (prop, schema) in props {
+                assert!(
+                    schema.is_object(),
+                    "tool `{name}`: property `{prop}` schema is not an object ({schema}); \
+                     a bare serde_json::Value needs a doc comment or #[serde(default)]"
+                );
+            }
+        }
+    }
+
     // --- tools/call list_nodes (query) --------------------------------------
     let list = r#"{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"list_nodes","arguments":{"query":"base64"}}}"#;
     let (list_resp, _) = post(addr, TOKEN, Some(&sid), list);
