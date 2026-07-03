@@ -1,20 +1,29 @@
 import {
+  Activity,
+  BarChart3,
   Binary,
   Bomb,
+  Camera,
   EyeOff,
   FileArchive,
+  FileSearch,
   Fingerprint,
   Hash,
   ImageDown,
+  KeyRound,
+  Layers,
   type LucideIcon,
   Network,
   QrCode,
   Lock,
+  Radio,
   Regex,
   Repeat,
   RotateCw,
   ScanLine,
+  Shuffle,
   Wand2,
+  Wrench,
 } from "lucide-react";
 
 /** A node inside a template. `key` is template-local; real ids are minted on load. */
@@ -44,7 +53,7 @@ export interface Template {
 const X = (i: number) => 40 + i * 240;
 const Y = 150;
 
-export const TEMPLATE_CATEGORIES = ["综合演示", "编码解码", "文本处理", "控制/流程", "密码学", "取证/文件"] as const;
+export const TEMPLATE_CATEGORIES = ["综合演示", "编码解码", "文本处理", "密码学", "控制/流程", "隐写术", "取证/文件"] as const;
 
 export const TEMPLATES: Template[] = [
   {
@@ -239,7 +248,7 @@ export const TEMPLATES: Template[] = [
     name: "零宽字符隐写还原",
     description:
       "把秘密写进不可见的零宽字符、藏进一句正常的话，再自动侦测符号映射并还原。演示零宽隐写的编码 → 解码闭环。",
-    category: "文本处理",
+    category: "隐写术",
     icon: EyeOff,
     nodes: [
       { key: "in", descriptorId: "text_input", position: { x: X(0), y: Y }, params: { text: "flag{zero_width_secret}" } },
@@ -377,7 +386,7 @@ export const TEMPLATES: Template[] = [
     name: "imageIN 图片取文件",
     description:
       "把 imageIN（图影）隐写图片里的文件还原出来：导入图片 → imageIN 文件提取（自动识别深度与排布、GBK 文件名）→ 一路识别文件类型、一路导出文件，并显示深度/文件名/大小。真实文件名见提取节点的『文件名』输出。",
-    category: "取证/文件",
+    category: "隐写术",
     icon: ImageDown,
     nodes: [
       { key: "file", descriptorId: "file_import", position: { x: 40, y: 250 } },
@@ -404,5 +413,322 @@ export const TEMPLATES: Template[] = [
       { key: "qr", descriptorId: "qr_encode", position: { x: X(1), y: Y }, params: { scale: 8 } },
     ],
     edges: [{ from: { node: "in", port: "text" }, to: { node: "qr", port: "text" } }],
+  },
+
+  // ---------------------------------------------------------------- 编码解码
+  {
+    id: "base32-decode",
+    name: "Base32 解码",
+    description: "Base32 编码还原为明文，常见于第二梯队编码。",
+    category: "编码解码",
+    icon: Binary,
+    nodes: [
+      { key: "in", descriptorId: "text_input", position: { x: X(0), y: Y }, params: { text: "MZWGCZ33MJQXGZJTGJPW6235" } },
+      { key: "dec", descriptorId: "base32_decode", position: { x: X(1), y: Y } },
+      { key: "out", descriptorId: "text_output", position: { x: X(2), y: Y } },
+    ],
+    edges: [
+      { from: { node: "in", port: "text" }, to: { node: "dec", port: "text" } },
+      { from: { node: "dec", port: "text" }, to: { node: "out", port: "text" } },
+    ],
+  },
+  {
+    id: "base58-decode",
+    name: "Base58 解码",
+    description: "比特币/短链常用的 Base58，去掉了易混字符。",
+    category: "编码解码",
+    icon: Binary,
+    nodes: [
+      { key: "in", descriptorId: "text_input", position: { x: X(0), y: Y }, params: { text: "3sCWBxPb32JKGDDB3y1dv" } },
+      { key: "dec", descriptorId: "base58_decode", position: { x: X(1), y: Y } },
+      { key: "out", descriptorId: "text_output", position: { x: X(2), y: Y } },
+    ],
+    edges: [
+      { from: { node: "in", port: "text" }, to: { node: "dec", port: "text" } },
+      { from: { node: "dec", port: "text" }, to: { node: "out", port: "text" } },
+    ],
+  },
+  {
+    id: "morse-decode",
+    name: "摩尔斯解码",
+    description: "点划电码转回文本，字母间空格、单词间 /。",
+    category: "编码解码",
+    icon: Radio,
+    nodes: [
+      { key: "in", descriptorId: "text_input", position: { x: X(0), y: Y }, params: { text: "..-. .-.. .- --. / .... . .-.. .-.. ---" } },
+      { key: "dec", descriptorId: "morse_decode", position: { x: X(1), y: Y } },
+      { key: "out", descriptorId: "text_output", position: { x: X(2), y: Y } },
+    ],
+    edges: [
+      { from: { node: "in", port: "text" }, to: { node: "dec", port: "text" } },
+      { from: { node: "dec", port: "text" }, to: { node: "out", port: "text" } },
+    ],
+  },
+  {
+    id: "binary-decode",
+    name: "二进制转文本",
+    description: "8 位一组的 0/1 串还原为 ASCII 文本。",
+    category: "编码解码",
+    icon: Binary,
+    nodes: [
+      {
+        key: "in",
+        descriptorId: "text_input",
+        position: { x: X(0), y: Y },
+        params: { text: "01100110 01101100 01100001 01100111 01111011 01100010 01101001 01101110 01100001 01110010 01111001 01111101" },
+      },
+      { key: "dec", descriptorId: "from_binary", position: { x: X(1), y: Y } },
+      { key: "out", descriptorId: "text_output", position: { x: X(2), y: Y } },
+    ],
+    edges: [
+      { from: { node: "in", port: "text" }, to: { node: "dec", port: "text" } },
+      { from: { node: "dec", port: "text" }, to: { node: "out", port: "text" } },
+    ],
+  },
+  {
+    id: "charcode-decode",
+    name: "码点转字符",
+    description: "空格分隔的十六进制码点转回字符（可切 10/8/2 进制）。",
+    category: "编码解码",
+    icon: Hash,
+    nodes: [
+      { key: "in", descriptorId: "text_input", position: { x: X(0), y: Y }, params: { text: "66 6c 61 67 7b 63 68 61 72 63 6f 64 65 7d" } },
+      { key: "dec", descriptorId: "from_charcode", position: { x: X(1), y: Y }, params: { base: "16", delimiter: "空格" } },
+      { key: "out", descriptorId: "text_output", position: { x: X(2), y: Y } },
+    ],
+    edges: [
+      { from: { node: "in", port: "text" }, to: { node: "dec", port: "text" } },
+      { from: { node: "dec", port: "text" }, to: { node: "out", port: "text" } },
+    ],
+  },
+
+  // ---------------------------------------------------------------- 密码学
+  {
+    id: "caesar-cipher",
+    name: "凯撒密码",
+    description: "字母表整体位移。示例位移 23（=解 +3 加密），改 amount 即可试其它位移。",
+    category: "密码学",
+    icon: RotateCw,
+    nodes: [
+      { key: "in", descriptorId: "text_input", position: { x: X(0), y: Y }, params: { text: "iodj{fdhvdu}" } },
+      { key: "c", descriptorId: "caesar", position: { x: X(1), y: Y }, params: { amount: 23 } },
+      { key: "out", descriptorId: "text_output", position: { x: X(2), y: Y } },
+    ],
+    edges: [
+      { from: { node: "in", port: "text" }, to: { node: "c", port: "text" } },
+      { from: { node: "c", port: "text" }, to: { node: "out", port: "text" } },
+    ],
+  },
+  {
+    id: "atbash-cipher",
+    name: "Atbash 密码",
+    description: "字母表反射（a↔z）。自反，编码解码同一操作。",
+    category: "密码学",
+    icon: Shuffle,
+    nodes: [
+      { key: "in", descriptorId: "text_input", position: { x: X(0), y: Y }, params: { text: "uozt{zgyzhs}" } },
+      { key: "a", descriptorId: "atbash", position: { x: X(1), y: Y } },
+      { key: "out", descriptorId: "text_output", position: { x: X(2), y: Y } },
+    ],
+    edges: [
+      { from: { node: "in", port: "text" }, to: { node: "a", port: "text" } },
+      { from: { node: "a", port: "text" }, to: { node: "out", port: "text" } },
+    ],
+  },
+  {
+    id: "railfence-decode",
+    name: "栅栏密码解密",
+    description: "W 型栅栏（zigzag）转置还原。示例 3 栏，改 rails 试其它栏数。",
+    category: "密码学",
+    icon: Shuffle,
+    nodes: [
+      { key: "in", descriptorId: "text_input", position: { x: X(0), y: Y }, params: { text: "f{lnlgri_ec}aafe" } },
+      { key: "rf", descriptorId: "rail_fence_decode", position: { x: X(1), y: Y }, params: { rails: 3 } },
+      { key: "out", descriptorId: "text_output", position: { x: X(2), y: Y } },
+    ],
+    edges: [
+      { from: { node: "in", port: "text" }, to: { node: "rf", port: "text" } },
+      { from: { node: "rf", port: "text" }, to: { node: "out", port: "text" } },
+    ],
+  },
+  {
+    id: "rc4-decrypt",
+    name: "RC4 解密",
+    description: "填入密文(Hex)与密钥即可解。RC4 加解密对称，改 operation/格式即可反向。",
+    category: "密码学",
+    icon: Lock,
+    nodes: [
+      { key: "in", descriptorId: "text_input", position: { x: X(0), y: Y }, params: { text: "" } },
+      {
+        key: "rc4",
+        descriptorId: "rc4",
+        position: { x: X(1), y: Y },
+        params: { key: "", keyFormat: "UTF8", inputFormat: "Hex", outputFormat: "UTF8" },
+      },
+      { key: "out", descriptorId: "text_output", position: { x: X(2), y: Y } },
+    ],
+    edges: [
+      { from: { node: "in", port: "text" }, to: { node: "rc4", port: "text" } },
+      { from: { node: "rc4", port: "text" }, to: { node: "out", port: "text" } },
+    ],
+  },
+  {
+    id: "rsa-recover-d",
+    name: "RSA 求私钥 d",
+    description: "已知素数 p、q 与公钥指数 e，算出 n、φ(n) 与私钥 d —— CTF 里最常见的 RSA 起手。",
+    category: "密码学",
+    icon: KeyRound,
+    nodes: [
+      { key: "rsa", descriptorId: "rsa_params", position: { x: X(0), y: Y }, params: { p: "61", q: "53", e: "17" } },
+      { key: "out", descriptorId: "text_output", position: { x: X(1), y: Y } },
+    ],
+    edges: [{ from: { node: "rsa", port: "text" }, to: { node: "out", port: "text" } }],
+  },
+
+  // ---------------------------------------------------------------- 文本处理
+  {
+    id: "char-frequency",
+    name: "字符频率统计",
+    description: "统计各字符出现次数，替换密码/词频分析的起点。",
+    category: "文本处理",
+    icon: BarChart3,
+    nodes: [
+      {
+        key: "in",
+        descriptorId: "text_input",
+        position: { x: X(0), y: Y },
+        params: { text: "the quick brown fox jumps over the lazy dog the end" },
+      },
+      { key: "cf", descriptorId: "char_frequency", position: { x: X(1), y: Y } },
+      { key: "out", descriptorId: "text_output", position: { x: X(2), y: Y } },
+    ],
+    edges: [
+      { from: { node: "in", port: "text" }, to: { node: "cf", port: "text" } },
+      { from: { node: "cf", port: "text" }, to: { node: "out", port: "text" } },
+    ],
+  },
+
+  // ---------------------------------------------------------------- 隐写术
+  {
+    id: "lsb-extract",
+    name: "LSB 位隐写提取",
+    description: "导入 PNG/BMP，按位平面读取 RGB 最低位拼回隐藏数据。图片隐写第一梯队。",
+    category: "隐写术",
+    icon: ImageDown,
+    nodes: [
+      { key: "file", descriptorId: "file_import", position: { x: X(0), y: Y } },
+      { key: "lsb", descriptorId: "lsb_extract", position: { x: X(1), y: Y } },
+      { key: "out", descriptorId: "text_output", position: { x: X(2), y: Y } },
+    ],
+    edges: [
+      { from: { node: "file", port: "bytes" }, to: { node: "lsb", port: "data" } },
+      { from: { node: "lsb", port: "text" }, to: { node: "out", port: "text" } },
+    ],
+  },
+  {
+    id: "stegcloak-reveal",
+    name: "StegCloak 解码",
+    description: "从掺入零宽字符的文本里取回秘密（可带密码）。把载体文本粘进输入即可。",
+    category: "隐写术",
+    icon: EyeOff,
+    nodes: [
+      { key: "in", descriptorId: "text_input", position: { x: X(0), y: Y }, params: { text: "" } },
+      { key: "sc", descriptorId: "stegcloak_reveal", position: { x: X(1), y: Y }, params: { password: "" } },
+      { key: "out", descriptorId: "text_output", position: { x: X(2), y: Y } },
+    ],
+    edges: [
+      { from: { node: "in", port: "text" }, to: { node: "sc", port: "text" } },
+      { from: { node: "sc", port: "text" }, to: { node: "out", port: "text" } },
+    ],
+  },
+  {
+    id: "cloacked-pixel-extract",
+    name: "cloacked-pixel 提取",
+    description: "导入图片 + 密码，解出 AES 加密后藏在 LSB 里的载荷。",
+    category: "隐写术",
+    icon: Lock,
+    nodes: [
+      { key: "file", descriptorId: "file_import", position: { x: X(0), y: Y } },
+      { key: "cp", descriptorId: "cloacked_pixel_extract", position: { x: X(1), y: Y }, params: { password: "" } },
+      { key: "out", descriptorId: "text_output", position: { x: X(2), y: Y } },
+    ],
+    edges: [
+      { from: { node: "file", port: "bytes" }, to: { node: "cp", port: "data" } },
+      { from: { node: "cp", port: "text" }, to: { node: "out", port: "text" } },
+    ],
+  },
+  {
+    id: "bit-plane",
+    name: "位平面提取",
+    description: "抽出某通道的单个位平面成黑白图，肉眼找隐藏图案/二维码。",
+    category: "隐写术",
+    icon: Layers,
+    nodes: [
+      { key: "img", descriptorId: "image_input", position: { x: X(0), y: Y } },
+      { key: "bp", descriptorId: "bit_plane", position: { x: X(1), y: Y }, params: { channel: "R", bit: 0 } },
+    ],
+    edges: [{ from: { node: "img", port: "bytes" }, to: { node: "bp", port: "data" } }],
+  },
+
+  // ---------------------------------------------------------------- 取证/文件
+  {
+    id: "filetype-detect",
+    name: "文件类型识别",
+    description: "读文件魔数判断真实类型，识破改错的后缀名。",
+    category: "取证/文件",
+    icon: FileSearch,
+    nodes: [
+      { key: "file", descriptorId: "file_import", position: { x: X(0), y: Y } },
+      { key: "ft", descriptorId: "detect_file_type", position: { x: X(1), y: Y } },
+      { key: "out", descriptorId: "text_output", position: { x: X(2), y: Y } },
+    ],
+    edges: [
+      { from: { node: "file", port: "bytes" }, to: { node: "ft", port: "data" } },
+      { from: { node: "ft", port: "text" }, to: { node: "out", port: "text" } },
+    ],
+  },
+  {
+    id: "exif-view",
+    name: "EXIF 信息",
+    description: "读出照片的 EXIF 元数据（拍摄时间、GPS、相机等）。",
+    category: "取证/文件",
+    icon: Camera,
+    nodes: [
+      { key: "file", descriptorId: "file_import", position: { x: X(0), y: Y } },
+      { key: "ex", descriptorId: "exif_extract", position: { x: X(1), y: Y } },
+      { key: "out", descriptorId: "text_output", position: { x: X(2), y: Y } },
+    ],
+    edges: [
+      { from: { node: "file", port: "bytes" }, to: { node: "ex", port: "data" } },
+      { from: { node: "ex", port: "text" }, to: { node: "out", port: "text" } },
+    ],
+  },
+  {
+    id: "entropy-check",
+    name: "香农熵分析",
+    description: "算文件的字节熵，判断是否加密/压缩（高熵≈随机）或藏了东西。",
+    category: "取证/文件",
+    icon: Activity,
+    nodes: [
+      { key: "file", descriptorId: "file_import", position: { x: X(0), y: Y } },
+      { key: "en", descriptorId: "entropy", position: { x: X(1), y: Y } },
+      { key: "out", descriptorId: "text_output", position: { x: X(2), y: Y } },
+    ],
+    edges: [
+      { from: { node: "file", port: "bytes" }, to: { node: "en", port: "data" } },
+      { from: { node: "en", port: "text" }, to: { node: "out", port: "text" } },
+    ],
+  },
+  {
+    id: "png-fix",
+    name: "PNG 宽高修复",
+    description: "PNG 被改了 IHDR 宽高导致显示不全时，CRC 爆破还原正确尺寸。",
+    category: "取证/文件",
+    icon: Wrench,
+    nodes: [
+      { key: "file", descriptorId: "file_import", position: { x: X(0), y: Y } },
+      { key: "fix", descriptorId: "png_fix", position: { x: X(1), y: Y }, params: { mode: "CRC 爆破" } },
+    ],
+    edges: [{ from: { node: "file", port: "bytes" }, to: { node: "fix", port: "data" } }],
   },
 ];
