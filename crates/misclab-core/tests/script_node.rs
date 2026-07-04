@@ -1,4 +1,8 @@
 //! External script/program node: pure output-building + real-process integration.
+//! The real-process tests are `#[cfg(windows)]` (they use Windows built-in
+//! commands), so their helper fns/imports are legitimately unused on Unix —
+//! allow that here rather than cfg-gating each item; Windows stays strict.
+#![cfg_attr(not(windows), allow(dead_code, unused_imports))]
 
 use std::collections::HashMap;
 use std::path::Path;
