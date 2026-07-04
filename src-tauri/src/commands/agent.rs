@@ -45,6 +45,8 @@ pub enum AgentEvent {
         descriptor_id: String,
         /// Param *overrides* only; the frontend fills descriptor defaults.
         params: Value,
+        /// One-line "巧思": why the agent adds this node now.
+        reason: String,
     },
     #[serde(rename_all = "camelCase")]
     Connect {
@@ -52,8 +54,9 @@ pub enum AgentEvent {
         from_port: String,
         to_key: String,
         to_port: String,
+        reason: String,
     },
-    SetParam { key: String, name: String, value: Value },
+    SetParam { key: String, name: String, value: Value, reason: String },
     RunStart { keys: Vec<String> },
     NodeResult { key: String, ok: bool, summary: String },
     ToolError { tool: String, message: String },
@@ -96,16 +99,17 @@ fn tool_defs() -> Vec<ToolDef> {
         ToolDef {
             name: "add_node".into(),
             description:
-                "在画布上新增一个节点。key 是你自定义的唯一标识(后续连线用)，type 必须是目录里的节点 id。"
+                "新增一个节点。一次只加一个，加完随即把它连到已有的图上。key 是你自定义的唯一标识(后续连线用)，type 必须是目录里的节点 id。"
                     .into(),
             parameters: json!({
                 "type": "object",
                 "properties": {
                     "key": {"type": "string", "description": "该节点的唯一标识(自定义, 如 in / dec / out)"},
                     "type": {"type": "string", "description": "节点 id, 必须来自可用节点目录"},
-                    "params": {"type": "object", "description": "参数覆盖(可选)"}
+                    "params": {"type": "object", "description": "参数覆盖(可选)"},
+                    "reason": {"type": "string", "description": "一句话巧思：结合线索说明为什么现在加这个节点(像在解题, ≤20字)"}
                 },
-                "required": ["key", "type"]
+                "required": ["key", "type", "reason"]
             }),
         },
         ToolDef {
@@ -117,7 +121,8 @@ fn tool_defs() -> Vec<ToolDef> {
                 "type": "object",
                 "properties": {
                     "from": {"type": "string", "description": "源, 形如 key 或 key.port"},
-                    "to": {"type": "string", "description": "目标, 形如 key 或 key.port"}
+                    "to": {"type": "string", "description": "目标, 形如 key 或 key.port"},
+                    "reason": {"type": "string", "description": "一句话巧思：这条连线在做什么(可选, ≤20字)"}
                 },
                 "required": ["from", "to"]
             }),
@@ -130,7 +135,8 @@ fn tool_defs() -> Vec<ToolDef> {
                 "properties": {
                     "key": {"type": "string"},
                     "name": {"type": "string"},
-                    "value": {"description": "参数值(字符串/数字/布尔)"}
+                    "value": {"description": "参数值(字符串/数字/布尔)"},
+                    "reason": {"type": "string", "description": "一句话巧思：为什么这么设(可选, ≤20字)"}
                 },
                 "required": ["key", "name", "value"]
             }),
@@ -164,18 +170,18 @@ fn tool_defs() -> Vec<ToolDef> {
 
 fn system_prompt(catalog: &str) -> String {
     format!(
-        "你是 LovelyMiscLab 的画布搭建 Agent。用户会描述一个 CTF misc 任务，你要通过“逐步调用工具”在画布上搭出一个数据流图(DAG)来完成它。\n\n\
+        "你是 LovelyMiscLab 的画布搭建 Agent。用户会描述一个 CTF misc 任务，你要像**解题**一样、**一个节点一个节点地**在画布上搭出数据流图(DAG)来完成它。\n\n\
 【可用节点】格式: id | 名称 | 输入端口 | 输出端口 | 参数\n{catalog}\n\
-【规则】\n\
-1. 只能使用上面出现过的节点 id。\n\
-2. 先 add_node 再 connect；连线要类型匹配(text↔text, bytes↔bytes；any 通配)。\n\
-3. 任务若从一段文本开始，用 text_input 作为源，并把该文本填进它的 text 参数(add_node 的 params 或 set_param)。\n\
-4. 需要展示最终文本结果时末尾接 text_output。\n\
-5. select 参数只能取候选值之一。\n\
-6. 参数也能被连线驱动：connect 到目标节点的“参数名”即可。\n\
-7. 需要验证中间结果或“反复解码直到出现 flag”这类自适应逻辑时，用 run_partial 运行并查看输出，再决定下一步。\n\
-8. 每一步只做一件事，按顺序调用工具，不要输出散文解释。\n\
-9. 搭建完成后调用 finish。"
+【工作方式 —— 逐步推进，每步带巧思】\n\
+1. 一次只加**一个**节点(add_node)，随即把它连到已有的图上(connect)，再想下一个；不要先把所有节点加完再统一连线。\n\
+2. 每个 add_node 都必须带 reason：结合线索用一句话说明“为什么现在加这个节点”(像在解题, ≤20字)，例如“看着像套娃 Base64”。connect / set_param 也尽量带 reason。\n\
+3. 拿不准下一步(如反复解码到出现 flag、验证某步是否正确)时，用 run_partial 运行当前图看输出，再据结果决定下一步。\n\
+【硬性规则】\n\
+4. 只能使用上面出现过的节点 id。\n\
+5. 连线类型要匹配(text↔text, bytes↔bytes；any 通配)。\n\
+6. 任务若从一段文本开始，用 text_input 作源并把文本填进它的 text 参数(add_node 的 params 或 set_param)；需要展示最终结果时末尾接 text_output。\n\
+7. select 参数只能取候选值之一；参数也能被连线驱动(connect 到目标节点的“参数名”)。\n\
+8. 只通过工具调用行动，不要输出散文解释。搭建完成后调用 finish。"
     )
 }
 
@@ -396,6 +402,7 @@ fn dispatch(
                     key: key.clone(),
                     descriptor_id: ty,
                     params,
+                    reason: arg_str(a, "reason").to_string(),
                 });
                 json!({ "ok": true, "key": key })
             }
@@ -427,6 +434,7 @@ fn dispatch(
                             from_port: fp,
                             to_key: tk,
                             to_port: tp,
+                            reason: arg_str(a, "reason").to_string(),
                         });
                         json!({ "ok": true })
                     }
@@ -447,7 +455,12 @@ fn dispatch(
                 if let Some(obj) = n.params.as_object_mut() {
                     obj.insert(name.clone(), value.clone());
                 }
-                let _ = on_event.send(AgentEvent::SetParam { key, name, value });
+                let _ = on_event.send(AgentEvent::SetParam {
+                    key,
+                    name,
+                    value,
+                    reason: arg_str(a, "reason").to_string(),
+                });
                 json!({ "ok": true })
             } else {
                 tool_err(on_event, "set_param", format!("未找到节点 key「{key}」"))
@@ -482,6 +495,7 @@ fn fallback(
                     key: n.key.clone(),
                     descriptor_id: n.descriptor_id.clone(),
                     params: n.params.clone(),
+                    reason: String::new(),
                 });
             }
             for e in &g.edges {
@@ -490,6 +504,7 @@ fn fallback(
                     from_port: e.from.port.clone(),
                     to_key: e.to.node.clone(),
                     to_port: e.to.port.clone(),
+                    reason: String::new(),
                 });
             }
             let _ = on_event.send(AgentEvent::Done {

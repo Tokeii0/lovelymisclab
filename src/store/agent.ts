@@ -13,6 +13,8 @@ export type AgentStepKind =
 export interface AgentStep {
   kind: AgentStepKind;
   text: string;
+  /** The one-line "巧思" the agent gave for this step, shown dimmer. */
+  detail?: string;
   /** For result steps: whether the node ran ok. */
   ok?: boolean;
 }

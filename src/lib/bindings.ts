@@ -101,9 +101,16 @@ export interface Suggestion {
 export type AgentEvent =
   | { kind: "started"; job: string; stepsMax: number }
   | { kind: "thinking"; text: string }
-  | { kind: "addNode"; key: string; descriptorId: string; params: unknown }
-  | { kind: "connect"; fromKey: string; fromPort: string; toKey: string; toPort: string }
-  | { kind: "setParam"; key: string; name: string; value: unknown }
+  | { kind: "addNode"; key: string; descriptorId: string; params: unknown; reason: string }
+  | {
+      kind: "connect";
+      fromKey: string;
+      fromPort: string;
+      toKey: string;
+      toPort: string;
+      reason: string;
+    }
+  | { kind: "setParam"; key: string; name: string; value: unknown; reason: string }
   | { kind: "runStart"; keys: string[] }
   | { kind: "nodeResult"; key: string; ok: boolean; summary: string }
   | { kind: "toolError"; tool: string; message: string }

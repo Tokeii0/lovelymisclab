@@ -60,7 +60,14 @@ export function AgentPanel() {
         {steps.map((s, i) => (
           <div key={i} className={cn("flex items-start gap-1.5 leading-relaxed", stepColor(s))}>
             {s.kind === "done" && <Check className="mt-0.5 h-3 w-3 shrink-0" />}
-            <span className="min-w-0 break-words font-mono">{s.text}</span>
+            <span className="min-w-0 flex-1 break-words">
+              <span className="font-mono">{s.text}</span>
+              {s.detail && (
+                <span className="mt-0.5 block text-[10px] italic text-muted-foreground/90">
+                  {s.detail}
+                </span>
+              )}
+            </span>
           </div>
         ))}
       </div>
